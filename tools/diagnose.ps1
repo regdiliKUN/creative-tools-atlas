@@ -34,7 +34,7 @@ Write-Output ('PACKAGE=' + $pkg)
 
 # --- Check 1: core files ---------------------------------------------------
 $core = @('index.html','github-creative-tools-atlas.html','route-a-painter-workstation.html',
-          'MANIFEST.md','CHANGELOG.md','icon.ico','icon.png')
+          'studio.html','MANIFEST.md','CHANGELOG.md','icon.ico','icon.png')
 $exeName = [char]0x521B + [char]0x4F5C + [char]0x5DE5 + [char]0x5177 + [char]0x661F + [char]0x56FE + '.exe'
 $core += $exeName
 $missing = @()

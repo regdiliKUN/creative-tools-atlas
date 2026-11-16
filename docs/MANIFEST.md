@@ -23,7 +23,7 @@
 | `快捷方式工具/resolve-desktop.ps1` | 1654 | `559ffd55014c49b5…` |
 | `快捷方式工具/rebuild-shortcut.ps1` | 2057 | `ee8445627068362b…` |
 | `快捷方式工具/verify-package.ps1` | 1846 | `a07b173a29d085e3…` |
-| `快捷方式工具/diagnose.ps1` | 5932 | `dccc36ba7e214b6d…` |
+| `快捷方式工具/diagnose.ps1` | 5946 | `6a91f984140b8031…` |
 
 > `_internal/` 为运行依赖目录，勿单独移动或删除。
 > 校验方法：在「快捷方式工具」目录运行 `verify-package.ps1`（比对 SHA-256）。
