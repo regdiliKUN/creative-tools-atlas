@@ -5,13 +5,14 @@
 | 文件 | 字节 | SHA-256（前16位） |
 |---|---:|---|
 | `创作工具星图.exe` | 1837065 | `64a3d61a81435a53…` |
-| `index.html` | 5603 | `f07e06ec92d6eee5…` |
+| `index.html` | 6397 | `a21af6a9f766937e…` |
 | `github-creative-tools-atlas.html` | 64997 | `12ba614f584d3c07…` |
 | `route-a-painter-workstation.html` | 45316 | `e19e0c9a3fdc4c11…` |
+| `studio.html` | 43387 | `d26e1aaa3c0312d1…` |
 | `icon.ico` | 73349 | `be7858e5ce66b7d6…` |
 | `icon.png` | 9304 | `3cc8b71f71d92672…` |
-| `使用说明.txt` | 4842 | `2dd53b92e733bb45…` |
-| `CHANGELOG.md` | 5155 | `c677e2c30334cf2e…` |
+| `使用说明.txt` | 5923 | `3ea0aa0ed6c71e37…` |
+| `CHANGELOG.md` | 6255 | `bf1f6656589449ce…` |
 | `迭代记录.md` | 7860 | `ad9f22bac2066800…` |
 | `迭代记录-v2.md` | 6507 | `a7362ba1bf1b3abf…` |
 | `迭代记录-v3.md` | 8230 | `5242942456be591d…` |

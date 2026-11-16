@@ -44,6 +44,7 @@ FILES = [
     "index.html",
     "github-creative-tools-atlas.html",
     "route-a-painter-workstation.html",
+    "studio.html",
     "icon.ico",
     "icon.png",
     "使用说明.txt",

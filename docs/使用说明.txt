@@ -44,6 +44,18 @@
   UTF-8 JSON 或用字符码拼接）。PowerShell 5.1 会按 ANSI 读取无 BOM 的 .ps1，
   混入中文会导致解析失败。
 
+【创作工坊 · 产出内容】
+  双击首页的「创作工坊」卡片进入，或直接用浏览器打开 studio.html。
+  填一次需求（项目名称、角色主体、创作目标、风格、显存、用途、是否商用、补充特征），
+  点「生成创作任务包」，即得到一份可复制、可导出 .md 的内容：
+    · 结构化正面 / 负面提示词，可直接粘进 ComfyUI 或 Krita AI Diffusion
+    · 三视图 / 重建基准图的 8 条硬规则与显存档位参数建议
+    · 7 个生产环节的工具链，同功能优中选优（首选 / 备选及判断依据）
+    · 分阶段执行清单、许可证与避坑提示、全部 52 个工具的索引
+  显存不够或许可高风险的工具会被自动降级，并写进「适配提示」，不会让你白跑。
+  任务包可「保存到本地」留存在浏览器里，随时载入或删除；所有输入仅在本机处理，
+  不上传、不联网（工具链接仅在点击时才访问网络）。
+
 【故障自查】
   若双击 exe 或桌面快捷方式没有反应，在「快捷方式工具」目录打开 PowerShell 执行：
     powershell -ExecutionPolicy Bypass -File diagnose.ps1
@@ -63,6 +75,7 @@
     index.html            ← 应用首页
     github-creative-tools-atlas.html
     route-a-painter-workstation.html
+    studio.html           ← 创作工坊（生成任务包）
     icon.ico / icon.png   ← 应用图标
     MANIFEST.md           ← 文件清单与校验基线
     快捷方式工具/         ← 快捷方式创建/重建/解析/校验脚本

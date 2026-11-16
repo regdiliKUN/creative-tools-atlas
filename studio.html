@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创作工坊 · 产出任务包 | 创作工具星图</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0e17;--panel:#151b2c;--line:#28324a;--text:#e8edf7;--muted:#98a4bd;--dim:#6d7893;
+    --paint:#ff9e7d;--model:#5fd0e6;--ai:#b794ff;--figure:#ffd479;--ok:#7ee0a8;--warn:#ffb86b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--text);line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1000px 560px at 12% -6%,rgba(183,148,255,.14),transparent 60%),
+      radial-gradient(900px 520px at 92% 8%,rgba(95,208,230,.10),transparent 60%),
+      radial-gradient(700px 500px at 50% 110%,rgba(255,158,125,.08),transparent 60%),var(--bg);}
+  .wrap{max-width:1040px;margin:0 auto;padding:52px 24px 90px}
+  .kicker{font-size:12px;letter-spacing:.3em;color:var(--ai);text-transform:uppercase;margin-bottom:14px}
+  h1{font-size:clamp(28px,4.6vw,44px);margin:0 0 10px;letter-spacing:-.02em}
+  h1 .g{background:linear-gradient(95deg,var(--paint),var(--ai) 55%,var(--model));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--muted);font-size:15px;max-width:760px;margin:0 0 8px}
+  .ver{font-size:12px;color:var(--dim);margin-bottom:30px}
+  h2{font-size:20px;margin:38px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+  h3{font-size:15px;margin:22px 0 10px;color:var(--muted)}
+  p{color:var(--muted);font-size:13.6px}
+  a{color:var(--ai)}
+  .panel{border:1px solid var(--line);border-radius:16px;padding:22px;background:linear-gradient(165deg,var(--panel),rgba(17,22,37,.6))}
+  .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px 20px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12.5px;color:var(--muted);font-weight:600}
+  label .hint{font-weight:400;color:var(--dim);font-size:11.5px}
+  input[type=text],textarea,select{width:100%;background:#0e1321;border:1px solid var(--line);border-radius:9px;
+    color:var(--text);padding:9px 11px;font-size:13.5px;font-family:inherit;line-height:1.5}
+  input[type=text]:focus,textarea:focus,select:focus{outline:2px solid rgba(183,148,255,.45);outline-offset:1px}
+  textarea{resize:vertical;min-height:78px}
+  .full{grid-column:1/-1}
+  .choices{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;
+    padding:6px 13px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none;background:rgba(255,255,255,.02)}
+  .chip:hover{border-color:rgba(255,255,255,.3)}
+  .chip input{accent-color:var(--ai);margin:0}
+  .chip.on{border-color:var(--ai);color:var(--text);background:rgba(183,148,255,.13)}
+  .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  button{font-family:inherit;font-size:13.5px;font-weight:600;border-radius:10px;padding:10px 18px;cursor:pointer;
+    border:1px solid var(--line);background:#1a2237;color:var(--text);transition:.18s}
+  button:hover{border-color:rgba(255,255,255,.35);transform:translateY(-1px)}
+  button.primary{background:linear-gradient(95deg,var(--ai),#8f7bff);border-color:transparent;color:#0b0e17}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .status{font-size:12.5px;color:var(--ok);min-height:20px;margin-top:10px}
+  .status.err{color:var(--warn)}
+  .out{margin-top:16px}
+  pre{background:#0a0f1b;border:1px solid var(--line);border-radius:12px;padding:18px;overflow:auto;
+    max-height:560px;font-size:12.4px;line-height:1.65;color:#cfd8ea;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,Consolas,"SF Mono",monospace}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+  .toolbar button{padding:8px 14px;font-size:12.5px}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+  .filters input{max-width:260px}
+  .group{margin-top:20px}
+  .group h3{display:flex;align-items:center;gap:9px;color:var(--text);font-size:16px;margin:0 0 10px}
+  .group h3 .cnt{font-size:11px;color:var(--dim);font-weight:400}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:10px}
+  .tool{border:1px solid var(--line);border-radius:11px;padding:12px 13px;background:rgba(255,255,255,.02)}
+  .tool .tn{font-size:13.2px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .tool .tn a{text-decoration:none}
+  .tool .tn a:hover{text-decoration:underline}
+  .badge{font-size:10px;padding:2px 7px;border-radius:6px;border:1px solid var(--line);color:var(--dim)}
+  .badge.top{color:#0b0e17;background:var(--ok);border-color:transparent;font-weight:700}
+  .badge.alt{color:var(--model);border-color:rgba(95,208,230,.4)}
+  .badge.legacy{color:var(--warn);border-color:rgba(255,184,107,.4)}
+  .badge.research,.badge.proto,.badge.spec,.badge.tech{color:var(--dim)}
+  .tool .meta{font-size:11.2px;color:var(--dim);margin-top:5px}
+  .tool .note{font-size:11.8px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .hist{border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:10px}
+  .hist ul{list-style:none;margin:0;padding:0}
+  .hist li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.6px}
+  .hist li:last-child{border-bottom:0}
+  .hist .t{color:var(--dim);min-width:130px;font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
+  .hist button{padding:5px 11px;font-size:11.5px}
+  .note-box{margin-top:26px;border:1px dashed var(--line);border-radius:14px;padding:16px 20px;color:var(--dim);font-size:12.4px}
+  .note-box b{color:var(--muted)}
+  .foot{margin-top:22px;font-size:12px;color:var(--dim)}
+  .home{position:fixed;right:22px;bottom:22px;z-index:99;display:inline-flex;align-items:center;gap:6px;
+    padding:9px 14px;border-radius:999px;background:rgba(21,27,44,.94);border:1px solid #28324a;
+    color:#b794ff;font-size:13px;text-decoration:none;backdrop-filter:blur(8px)}
+  .home:hover{border-color:#b794ff}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}}
+  @media print{
+    body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact}
+    .panel,.tool,.hist,pre,.badge{border:1px solid #bbb!important;background:#fff!important;box-shadow:none}
+    h1,h2,h3,p,.lede,.tool .note,.tool .meta,.foot,.note-box{color:#111!important}
+    h1 .g{-webkit-text-fill-color:#111;background:none;color:#111}
+    .form-grid,.btns,.toolbar,.filters,.home,.hist button{display:none!important}
+    pre{color:#111!important;max-height:none;overflow:visible;white-space:pre-wrap}
+    .tool .tn a{color:#111!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" role="main" aria-label="创作工坊：生成创作任务包">
+
+  <div class="kicker">Production Studio · v1.6.0</div>
+  <h1>创作<span class="g">工坊</span></h1>
+  <p class="lede">把星图里的工具真正用起来：填一次需求，产出一份能直接拿去干活的<strong>创作任务包</strong>——提示词、工具链（同功能优中选优）、执行清单、许可证警示，可复制、可导出、可本地留存。</p>
+  <div class="ver">纯本地运行 · 不上传任何输入 · 数据口径 2026-11-16 快照 · 工具链接仅在点击时访问网络</div>
+
+  <h2 id="sec-form">① 填需求</h2>
+  <div class="panel">
+    <div class="form-grid">
+      <div class="field">
+        <label for="proj">项目名称 <span class="hint">用于任务包标题与导出文件名</span></label>
+        <input type="text" id="proj" placeholder="例：森林守卫·角色设定" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="subject">角色 / 主体 <span class="hint">名称或一句话身份</span></label>
+        <input type="text" id="subject" placeholder="例：一位披苔藓斗篷的森林守卫" maxlength="120">
+      </div>
+      <div class="field full">
+        <label>创作目标 <span class="hint">可多选，工具链会据此串起对应环节</span></label>
+        <div class="choices" id="goals"></div>
+      </div>
+      <div class="field">
+        <label for="style">视觉风格</label>
+        <select id="style">
+          <option value="干净赛璐璐平涂">干净赛璐璐平涂</option>
+          <option value="厚涂概念设定">厚涂概念设定</option>
+          <option value="日系插画">日系插画</option>
+          <option value="写实 PBR">写实 PBR</option>
+          <option value="低多边形 / 风格化">低多边形 / 风格化</option>
+          <option value="像素风">像素风</option>
+          <option value="水彩 / 手绘">水彩 / 手绘</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="vram">显卡显存 <span class="hint">决定图生 3D 模型档位</span></label>
+        <select id="vram">
+          <option value="0">无本地卡 / 只用云端</option>
+          <option value="6">6 GB（入门）</option>
+          <option value="12" selected>12 GB（主流）</option>
+          <option value="24">24 GB（进阶）</option>
+          <option value="29">29 GB+（充足）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="usage">用途 / 交付物</label>
+        <select id="usage">
+          <option value="个人练习">个人练习</option>
+          <option value="内部项目">公司内部项目</option>
+          <option value="作品集展示">作品集展示</option>
+          <option value="商业售卖 / 周边">商业售卖 / 周边</option>
+          <option value="游戏 / 引擎资产">游戏 / 引擎资产</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="comm">是否需要商用</label>
+        <select id="comm">
+          <option value="no">否（自用 / 学习）</option>
+          <option value="yes">是（会分发或售卖）</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="extra">补充特征 <span class="hint">选填：配色、道具、姿态、禁止元素等，会写进提示词</span></label>
+        <textarea id="extra" placeholder="例：主色墨绿与暖橙，持木质长杖，站姿，不要武器发光、不要文字水印" maxlength="500"></textarea>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="primary" id="gen">生成创作任务包</button>
+      <button id="clear">清空表单</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <h2 id="sec-out">② 拿产出</h2>
+  <div class="panel">
+    <div class="out">
+      <pre id="output" aria-label="生成的创作任务包">尚未生成。填好左侧需求后点「生成创作任务包」，这里会出现一份可复制、可导出的 Markdown 任务包。</pre>
+    </div>
+    <div class="toolbar">
+      <button id="copy" disabled>复制任务包</button>
+      <button id="copyPrompt" disabled>只复制提示词</button>
+      <button id="download" disabled>导出 .md</button>
+      <button id="save" disabled>保存到本地</button>
+      <button id="print">打印 / 存 PDF</button>
+    </div>
+    <div class="status" id="outStatus" role="status" aria-live="polite"></div>
+  </div>
+
+  <h2 id="sec-tools">③ 工具全览 · 优中选优</h2>
+  <p>星图里介绍到的工具全部编入下方 7 个生产环节。同功能重复的一律优中选优：<span class="badge top">首选</span> 是可直接开工的那个，<span class="badge alt">备选</span> 是特定条件下的更优解，其余标注为上一代 / 研究 / 原型，避免踩坑。</p>
+  <div class="filters">
+    <input class="search" type="search" id="q" placeholder="筛选工具 / 关键词…" aria-label="筛选工具">
+    <span class="sr" id="filter-status" role="status" aria-live="polite"></span>
+  </div>
+  <div id="toolList"></div>
+
+  <h2 id="sec-hist">④ 本地留存</h2>
+  <p>任务包保存在浏览器 localStorage，只在这台电脑上，不上传。可随时载入、删除。</p>
+  <div class="hist" id="hist"><ul><li>暂无留存记录。</li></ul></div>
+
+  <div class="note-box" role="note" aria-label="使用说明">
+    <b>怎么用产出物：</b>任务包里的「提示词包」可直接粘进 ComfyUI / Krita AI Diffusion 的正负提示词框；「执行清单」按阶段勾选推进；「工具链」每行都带仓库地址，点开即取。参数与权重来自社区经验值，是起点参考而非官方保证；商用前务必逐个核对 LICENSE（本页已把高风险项单独列出）。
+  </div>
+  <div class="foot" role="contentinfo">创作工具星图 · 创作工坊 · 数据与推荐理由取自本包内两份报告 · 本地构建于 2026-11-17</div>
+
+  <a class="home" href="index.html" title="返回导航首页">&#8592; 导航首页</a>
+</div>
+
+<script>
+"use strict";
+/* ---------------------------------------------------------------- 数据底座
+   全部工具来自包内两份报告。tier: top 首选 / alt 备选 / legacy 上一代
+   / research 研究教学 / proto 原型(已被吸收) / spec 规范 / tech 技法
+   roles: 适用目标; vram: 最低显存 GB(0=不需要)                            */
+const GROUPS = [
+  {id:"canvas", name:"画布 / 数字绘画", color:"var(--paint)", tools:[
+    {n:"Krita", u:"https://github.com/KDE/krita", s:"10.8k ★", lic:"GPL-3.0", tier:"top", vram:0, roles:[], note:"免费里最接近正经画画的那个，笔刷/图层/漫画分格齐全，也是 AI 插件的宿主。链条第一环最稳的起点。"},
+    {n:"Krita AI Diffusion", u:"https://github.com/Acly/krita-ai-diffusion", s:"10.9k ★", lic:"GPL-3.0", tier:"top", vram:6, roles:["character","triview","texture"], note:"在 Krita 内把选区/线稿/姿态翻译成生成条件；官方硬指标 NVIDIA ≥6GB。四把刷子都在它里面。"},
+    {n:"Aseprite", u:"https://github.com/aseprite/aseprite", s:"~40.8k ★", lic:"EULA", tier:"alt", vram:0, roles:["pixel"], note:"像素画与逐帧动画首选；源码可读但官方二进制需购买，商用务必先读 EULA。"},
+    {n:"OpenToonz", u:"https://github.com/opentoonz/opentoonz", s:"7.8k ★", lic:"BSD-3", tier:"alt", vram:0, roles:["pixel"], note:"完整 2D 动画制作：扫描线稿、自动上色、摄影表、骨骼变形。做动画而非单张插画时选它。"},
+    {n:"excalidraw", u:"https://github.com/excalidraw/excalidraw", s:"—", lic:"MIT", tier:"alt", vram:0, roles:[], note:"手绘风白板，画流程草图与创作构思；不是正式绘画工具，仅用于前期构思。"},
+    {n:"ArmorPaint", u:"https://github.com/armory3d/armorpaint", s:"~5.5k ★", lic:"—", tier:"alt", vram:0, roles:["texture","to3d"], note:"直接在 3D 模型表面绘制 PBR 贴图，是「绘画」与「建模」之间的那道门。"},
+    {n:"openpose", u:"https://github.com/CMU-Perceptual-Computing-Lab/openpose", s:"~33.6k ★", lic:"—", tier:"legacy", vram:0, roles:["triview"], note:"姿态关键点提取做参考，已停更多年；实际部署用 ComfyUI 内置的 OpenPose 预处理器即可。"}
+  ]},
+  {id:"engine", name:"AI 生成引擎 / 一致性", color:"var(--ai)", tools:[
+    {n:"ComfyUI", u:"https://github.com/Comfy-Org/ComfyUI", s:"147.1k ★", lic:"GPL-3.0", tier:"top", vram:6, roles:[], note:"节点式生成工作流引擎，整个开源创作生态的中枢神经。若只深入一个 AI 项目，选它。"},
+    {n:"IP-Adapter / FaceID", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:0, roles:["character","triview"], note:"零训练锁身份，权重 0.6–0.8；>0.8 僵硬发糊，<0.5 锁不住脸。在 ComfyUI 内以节点实现。"},
+    {n:"InstantID / PuLID", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:0, roles:["character","triview"], note:"零训练、脸部保真更强，常与 IP-Adapter 叠用（一个管脸、一个管风格体态）。"},
+    {n:"自训角色 LoRA", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:12, roles:["character","triview"], note:"20–30 张多角度图微调约半小时，系列化/量产/长期角色的正解；训练集必须含多角度。"},
+    {n:"ControlNet", u:"https://github.com/lllyasviel/ControlNet", s:"34.1k ★", lic:"Apache-2.0", tier:"proto", vram:0, roles:["triview","to3d"], note:"条件控制的论文与原型，早已被 ComfyUI 与 Krita 插件内置吸收；不需单独安装，也不需打开。"},
+    {n:"AUTOMATIC1111 WebUI", u:"https://github.com/AUTOMATIC1111/stable-diffusion-webui", s:"上一代", lic:"AGPL-3.0", tier:"legacy", vram:6, roles:[], note:"上一代 AI 绘画界面的王者，如今节奏明显放缓；新项目更建议从 ComfyUI 起步。"},
+    {n:"Fooocus", u:"https://github.com/lllyasviel/Fooocus", s:"上一代", lic:"GPL-3.0", tier:"legacy", vram:6, roles:[], note:"开箱即用的简洁界面，同样明显放缓；与 A1111 属重复功能，优中选优让位 ComfyUI。"}
+  ]},
+  {id:"model", name:"3D 建模 / 修模 / 格式", color:"var(--model)", tools:[
+    {n:"Blender", u:"https://github.com/blender/blender", s:"~21.7k ★", lic:"GPL-3.0", tier:"top", vram:0, roles:[], note:"全流程 3D 套件；AI 吐出的网格漏面/非流形/薄壁/空腔，全靠它收尾，这一步别省。"},
+    {n:"trimesh", u:"https://github.com/mikedh/trimesh", s:"3.7k ★", lic:"MIT", tier:"top", vram:0, roles:["print","to3d"], note:"纯 Python 三角网格库，STL/OBJ/PLY/GLB/3MF 通吃；脚本化批量检查与修复网格的首选。"},
+    {n:"MCP for Blender", u:"https://github.com/ahujasid/mcp-for-blender", s:"34.5k ★", lic:"MIT", tier:"alt", vram:0, roles:[], note:"让 LLM 直接读写 Blender 场景：建物体、改材质、跑渲染。2026-09 由 blender-mcp 更名，认新地址。"},
+    {n:"MeshLab", u:"https://github.com/cnr-isti-vclab/meshlab", s:"5.7k ★", lic:"GPL-3.0", tier:"alt", vram:0, roles:["print","to3d"], note:"网格清理、修补、简化、贴图烘焙的图形界面老将，3D 打印前处理常用。"},
+    {n:"instant-meshes", u:"https://github.com/wjakob/instant-meshes", s:"6.1k ★", lic:"BSD", tier:"alt", vram:0, roles:["to3d"], note:"自动四边面重拓扑；AI 生成的一团三角面想变成可编辑规整网格就靠它。"},
+    {n:"instant-meshes-2026", u:"https://github.com/MondRubberduck/instant-meshes-2026", s:"社区分支", lic:"—", tier:"alt", vram:0, roles:["to3d"], note:"上者的社区现代化分支，老仓库停更时优先试这个。"},
+    {n:"FreeCAD", u:"https://github.com/FreeCAD/FreeCAD", s:"35.4k ★", lic:"LGPL-2.0", tier:"alt", vram:0, roles:["cad"], note:"参数化 3D CAD：约束草图、特征历史、工程图、Python API；做可打印的硬表面零件选它。"},
+    {n:"OpenSCAD", u:"https://github.com/openscad/openscad", s:"10.6k ★", lic:"GPL-2.0", tier:"alt", vram:0, roles:["cad"], note:"用代码描述实体（CSG + 轮廓拉伸），改一个变量整件模型随之重算。"},
+    {n:"CadQuery", u:"https://github.com/CadQuery/cadquery", s:"6.1k ★", lic:"Apache-2.0", tier:"alt", vram:0, roles:["cad"], note:"Python 版参数化 CAD，比 OpenSCAD 更贴近现代 Python 工作流；与 FreeCAD 属重复功能，按语言偏好二选一。"},
+    {n:"text-to-cad", u:"https://github.com/earthtojake/text-to-cad", s:"~26k ★", lic:"—", tier:"alt", vram:0, roles:["cad"], note:"2026 新项目，给编码 Agent 用的 CAD 技能包，代表「Agent 直接造模型」的方向。"},
+    {n:"Assimp", u:"https://github.com/assimp/assimp", s:"13.3k ★", lic:"BSD-3", tier:"alt", vram:0, roles:["to3d"], note:"把 40+ 种 3D 格式互转的导入库，格式不通时用它做中转。"},
+    {n:"glTF-Blender-IO", u:"https://github.com/KhronosGroup/glTF-Blender-IO", s:"~1.7k ★", lic:"Apache-2.0", tier:"alt", vram:0, roles:["vrm","print"], note:"GLB 进出 Blender 的官方通道，网页展示与引擎导入的标准格式。"}
+  ]},
+  {id:"to3d", name:"图生 3D / 重建", color:"var(--ai)", tools:[
+    {n:"TripoSR", u:"https://github.com/VAST-AI-Research/TripoSR", s:"6.9k ★", lic:"MIT", tier:"top", vram:6, roles:["to3d","print"], note:"前馈式单图重建，约 6GB / 亚秒级 / 干净 MIT。轻量验证与商用最稳的第一站。"},
+    {n:"TRELLIS / TRELLIS.2", u:"https://github.com/microsoft/TRELLIS", s:"14.3k ★", lic:"MIT", tier:"top", vram:24, roles:["to3d","print"], note:"结构化潜变量 SLAT，一份结果可解码成 Mesh / 3D Gaussian；资产级质量 + 干净 MIT，显存 24GB 起。"},
+    {n:"Hunyuan3D 2.0", u:"https://github.com/Tencent-Hunyuan/Hunyuan3D-2", s:"15.4k ★", lic:"社区许可", tier:"alt", vram:16, roles:["to3d","print"], note:"两阶段生成（几何→纹理），中文生态与手办适配最厚；社区许可含地域排除与大用户条款，商用前必读。"},
+    {n:"Hunyuan3D-2.1", u:"https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1", s:"~4.4k ★", lic:"社区许可", tier:"alt", vram:16, roles:["to3d","texture"], note:"2.0 的画质升级支线，主打生产级 PBR 材质；许可限制同上。"},
+    {n:"Unique3D", u:"https://github.com/AiuniAI/Unique3D", s:"3.6k ★", lic:"—", tier:"alt", vram:12, roles:["to3d"], note:"单图约 30 秒产出带纹理网格：多视图扩散 → 多级上采样提纹理。"},
+    {n:"InstantMesh", u:"https://github.com/TencentARC/InstantMesh", s:"~4.6k ★", lic:"—", tier:"legacy", vram:12, roles:["to3d"], note:"多视图扩散 + FlexiCubes，主要更新停在 2024；高星不等于还活着，读原理可以，部署找仍在维护的。"},
+    {n:"shap-e", u:"https://github.com/openai/shap-e", s:"~12k ★", lic:"MIT", tier:"research", vram:0, roles:["to3d"], note:"3D 生成的基础范式教学仓，细节偏弱；适合读原理而非出成品。"},
+    {n:"zero123plus", u:"https://github.com/SUDO-AI-3D/zero123plus", s:"—", lic:"—", tier:"proto", vram:0, roles:["triview","to3d"], note:"单图生成一致多视图，是很多图生 3D 链路的上游模块；做角色三视图时特别有用。"},
+    {n:"threestudio", u:"https://github.com/threestudio-project/threestudio", s:"—", lic:"—", tier:"research", vram:0, roles:["to3d"], note:"偏研究与 3D 重建的框架，适合想深入算法的人。"},
+    {n:"gaussian-splatting", u:"https://github.com/graphdeco-inria/gaussian-splatting", s:"—", lic:"—", tier:"research", vram:0, roles:["to3d"], note:"3D Gaussian Splatting 原始实现，研究向；TRELLIS 已能直接解码出 3DGS。"}
+  ]},
+  {id:"role", name:"角色 / VRM 生态", color:"var(--figure)", tools:[
+    {n:"VRM Add-on for Blender", u:"https://github.com/saturday06/VRM-Addon-for-Blender", s:"1.7k ★", lic:"—", tier:"top", vram:0, roles:["vrm"], note:"在 Blender 中导入/导出 VRM 0.x 与 1.0，Humanoid 骨骼与表情标准化；做 VRM 的第一站。"},
+    {n:"MakeHuman", u:"https://github.com/makehumancommunity/makehuman", s:"~1.6k ★", lic:"AGPL-3.0", tier:"alt", vram:0, roles:["vrm","print"], note:"滑杆生成参数化 3D 人体，输出带骨骼的基础网格；适合快速起人体底模。"},
+    {n:"CharacterStudio", u:"https://github.com/M3-org/CharacterStudio", s:"375 ★", lic:"—", tier:"alt", vram:0, roles:["vrm"], note:"浏览器里的 VRM/glTF 角色工作室：点选换装、拖入本地模型与贴图、调色。"},
+    {n:"three-vrm", u:"https://github.com/pixiv/three-vrm", s:"2.3k ★", lic:"MIT", tier:"alt", vram:0, roles:["vrm"], note:"Three.js 的 VRM 加载与渲染库，网页里展示角色用它。"},
+    {n:"model-viewer", u:"https://github.com/google/model-viewer", s:"—", lic:"Apache-2.0", tier:"alt", vram:0, roles:["vrm","print"], note:"一个标签即可在网页展示 GLB/GLTF，作品集展示最省事。"},
+    {n:"VRMify", u:"https://github.com/JiGuang283/VRMify", s:"—", lic:"—", tier:"alt", vram:0, roles:["vrm"], note:"把 MMD 的 PMX 模型转成 VRM，是 MMD 角色资源宝库的钥匙。"},
+    {n:"VSeeFace", u:"https://github.com/emilianavt/VSeeFace", s:"—", lic:"—", tier:"alt", vram:0, roles:["vrm"], note:"面捕驱动 VRM 角色，让做好的形象动起来。"},
+    {n:"VRM 规范", u:"https://github.com/vrm-c/vrm-specification", s:"规范", lic:"—", tier:"spec", vram:0, roles:["vrm"], note:"VRM 格式规范本身；遇到兼容性问题回来查这份。"},
+    {n:"smplx", u:"https://github.com/vchoutas/smplx", s:"—", lic:"—", tier:"research", vram:0, roles:["vrm"], note:"学术向参数化人体模型，研究用而非出成品。"}
+  ]},
+  {id:"print", name:"切片 / 打印收尾", color:"var(--figure)", tools:[
+    {n:"OrcaSlicer", u:"https://github.com/OrcaSlicer/OrcaSlicer", s:"~16.2k ★", lic:"AGPL-3.0", tier:"top", vram:0, roles:["print"], note:"FDM 切片首选：内置校准测试、逐特征参数、树状/有机支撑、多机型配置。已从 SoftFever 迁到组织账号。"},
+    {n:"UVtools", u:"https://github.com/sn4k3/UVtools", s:"~1.6k ★", lic:"AGPL-3.0", tier:"top", vram:0, roles:["print"], note:"直接打开并编辑已切片的光固化文件（.ctb/.goo/.photon…），光固化路线的收尾利器。"},
+    {n:"PrusaSlicer", u:"https://github.com/prusa3d/PrusaSlicer", s:"~9.4k ★", lic:"AGPL-3.0", tier:"alt", vram:0, roles:["print"], note:"稳定保守的 FDM 切片；求稳、不追新功能时选它。"},
+    {n:"Cura", u:"https://github.com/Ultimaker/Cura", s:"~7.1k ★", lic:"LGPL-3.0", tier:"alt", vram:0, roles:["print"], note:"机型兼容最广；老机器或非主流机型找不到配置时用它。"}
+  ]},
+  {id:"craft", name:"技法 / 中间产物", color:"var(--muted)", tools:[
+    {n:"三视图控制图", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:0, roles:["triview","to3d"], note:"预置标准三视图骨架/深度图作条件，强制统一人体比例；换视角只换控制图、不换提示词。"},
+    {n:"抠图 / 净化", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:0, roles:["to3d","print"], note:"Rembg / LaMa 抠图、去水印、ColorMatch、FaceDetailer；脏数据进重建流程等于埋雷，别省。"},
+    {n:"锁 Seed 做变体", u:"https://github.com/Comfy-Org/ComfyUI", s:"技法", lic:"—", tier:"tech", vram:0, roles:["character","triview"], note:"找到满意基底后锁 Seed，只调 CFG / Denoise 出变体，保证角色一致性。"}
+  ]}
+];
+
+const GOALS = [
+  {id:"character", label:"角色立绘 / 设定图"},
+  {id:"triview",   label:"三视图 / 重建基准图"},
+  {id:"to3d",      label:"图生 3D 模型"},
+  {id:"print",     label:"手办 / 3D 打印"},
+  {id:"vrm",       label:"VRM / 虚拟形象"},
+  {id:"pixel",     label:"像素 / 2D 动画"},
+  {id:"cad",       label:"参数化 CAD 零件"},
+  {id:"texture",   label:"PBR 贴图 / 材质"}
+];
+const TIER_LABEL = {top:"首选",alt:"备选",legacy:"上一代",research:"研究",proto:"原型",spec:"规范",tech:"技法"};
+const TIER_RANK  = {top:0,alt:1,tech:2,proto:3,legacy:4,research:5,spec:6};
+const RISK = {
+  "community":"社区许可：明确排除欧盟/英国/韩国且有大用户条款，商用前逐条读",
+  "EULA":"EULA：源码可读但官方二进制需购买",
+  "AGPL-3.0":"AGPL-3.0：有网络服务传染性",
+  "GPL-3.0":"GPL-3.0：代码嵌入分发产品需履行 copyleft"
+};
+
+/* ---------------------------------------------------------------- 工具函数 */
+const $ = id => document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function safeName(s){return (s||"创作任务包").replace(/[\\/:*?"<>|]/g,"_").trim().slice(0,50)||"创作任务包";}
+function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function setStatus(el,msg,err){el.textContent=msg;el.classList.toggle("err",!!err);}
+
+/* ---------------------------------------------------------------- 表单 */
+function buildGoals(){
+  $("goals").innerHTML = GOALS.map(g=>
+    `<label class="chip"><input type="checkbox" value="${g.id}">${esc(g.label)}</label>`).join("");
+  $("goals").querySelectorAll("input").forEach(i=>i.addEventListener("change",()=>
+    i.closest(".chip").classList.toggle("on",i.checked)));
+}
+function profile(){
+  return {
+    proj:$("proj").value.trim(), subject:$("subject").value.trim(),
+    goals:[...$("goals").querySelectorAll("input:checked")].map(i=>i.value),
+    style:$("style").value, vram:parseInt($("vram").value,10),
+    usage:$("usage").value, comm:$("comm").value,
+    extra:$("extra").value.trim()
+  };
+}
+
+/* ---------------------------------------------------------------- 优中选优 */
+function applicable(t,p){
+  if(!t.roles||t.roles.length===0) return true;          // 通用工具恒可用
+  return p.goals.length===0 || t.roles.some(r=>p.goals.includes(r));
+}
+function rankTools(group,p){
+  return group.tools.map(t=>{
+    let rank = TIER_RANK[t.tier] ?? 9;
+    let why  = "";
+    // 显存不足降级；无本地卡时全部本地推理项标注云端
+    if(t.vram>p.vram){
+      rank += 8;
+      why = p.vram===0 ? "需本地显卡；无卡可先用 Hugging Face Space 体验"
+                       : `需 ≥${t.vram}GB，当前 ${p.vram}GB 不足`;
+    }
+    // 商用场景：高风险许可降级并附警示
+    if(p.comm==="yes" && RISK[t.lic]){
+      rank += 4;
+      why = (why?why+"；":"") + RISK[t.lic];
+    }
+    // 目标高度契合的 top 项再提前
+    if(t.roles.some(r=>p.goals.includes(r)) && t.tier==="top") rank -= 1;
+    return {...t, rank, why};
+  }).sort((a,b)=>a.rank-b.rank);
+}
+
+/* ---------------------------------------------------------------- 提示词包 */
+function promptPack(p){
+  const subj = p.subject || "原创角色";
+  const feat = p.extra ? "，" + p.extra : "";
+  const pos =
+`${subj}，${p.style}，角色设定图，完整全身，居中构图，单人，干净白底，平光均匀照明，
+高细节，清晰线稿，锐利焦点，8k，masterpiece, best quality, character sheet,
+正面视角，比例准确，无遮挡${feat}`;
+  const neg =
+`lowres, blurry, jpeg artifacts, watermark, text, signature, logo, extra limbs,
+bad anatomy, deformed hands, mutated fingers, missing fingers, extra fingers,
+multiple people, cropped, out of frame, cluttered background, heavy shadow,
+nsfw, glowing weapon, distorted face`;
+  const tri =
+`【三视图 / 重建基准图规格（8 条硬规则）】
+1 白底或透明底，平光，单对象，正面或 3/4 视角
+2 分辨率 1024² 以上，正/侧/后三视图尺寸一致、顺序固定
+3 不换提示词，只换控制图（OpenPose / Depth / Canny）来切视角
+4 一致性权重：IP-Adapter / FaceID 从 0.6 起，>0.8 僵硬、<0.5 锁不住
+5 系列化/量产改用 20–30 张多角度图自训 LoRA
+6 锁 Seed，只调 CFG / Denoise 出变体
+7 生成后必须净化：Rembg 抠图 / LaMa / 去水印 / ColorMatch / FaceDetailer
+8 输出干净 PNG 再进重建；脏数据进图生 3D 等于埋雷`;
+  const params = p.vram===0
+    ? "本地无卡：整条 AI 链路改用云端（Hugging Face Space / 在线 ComfyUI），本地只做绘画与修模。"
+    : `显存 ${p.vram}GB 起步参数：先跑一张 512² 小图验证链路，再上 1024²；`+
+      `CFG 7 左右、Denoise 0.5–0.65 起试；不要第一步就勾 Flux / Z-Image 等大模型。`;
+  return {pos,neg,tri,params};
+}
+
+/* ---------------------------------------------------------------- 执行清单 */
+function steps(p){
+  const g=new Set(p.goals);
+  const S=[
+    "阶段 0 · 装机：确认 Krita ≥5.2.0 + Krita AI Diffusion 插件 + ComfyUI 能连通；先跑 512² 小图验证链路，别一上来拉 50GB 模型。",
+    "阶段 1 · 起稿：在 Krita 画出角色基底，用选区生成 / Live Painting / 控制层反复迭代，保留分层源文件。"
+  ];
+  if(g.has("triview")||g.has("to3d")||g.has("print"))
+    S.push("阶段 2 · 三视图：预置骨架/深度控制图，固定提示词切三视角，锁 Seed 出变体，输出尺寸一致的正/侧/后三视图。");
+  if(g.has("to3d")||g.has("print"))
+    S.push("阶段 3 · 图生 3D：把净化后的干净 PNG 送进下面「工具链」选出的重建模型，导出 GLB / OBJ。");
+  if(g.has("texture")) S.push("阶段 3b · 贴图：在 ArmorPaint / Blender 中绘制或烘焙 PBR 贴图，检查 UV 与法线。");
+  if(g.has("cad")) S.push("阶段 3c · 参数化零件：用 FreeCAD / OpenSCAD / CadQuery 建模，导出 STL 后与角色网格合体。");
+  if(g.has("print"))
+    S.push("阶段 4 · 修模（别省）：Blender 查漏面/非流形/薄壁/内部空腔，trimesh 脚本化校验，MeshLab 简化，instant-meshes 重拓扑。");
+  if(g.has("print")) S.push("阶段 5 · 切片打印：OrcaSlicer（FDM）或 UVtools（光固化），加树状支撑，先打小样验证比例与壁厚。");
+  if(g.has("vrm")) S.push("阶段 4b · VRM：Blender + VRM Add-on 导出 VRM 1.0，three-vrm / model-viewer 网页验证，VSeeFace 面捕试跑。");
+  if(g.has("pixel")) S.push("阶段 2b · 动画：Aseprite（像素逐帧）或 OpenToonz（2D 动画）导出精灵表 / 序列帧。");
+  S.push("阶段 6 · 交付：整理分层源文件、提示词、Seed、模型与截图；保留人工修改痕迹作为合规与质量证据。");
+  return S;
+}
+
+/* ---------------------------------------------------------------- 任务包生成 */
+function buildPackage(p){
+  const L=[];
+  const goalNames=p.goals.length?p.goals.map(id=>(GOALS.find(g=>g.id===id)||{}).label).filter(Boolean).join(" / "):"通用创作";
+  L.push(`# 创作任务包：${p.proj||"未命名项目"}`,"");
+  L.push(`> 生成时间：${stamp()}　|　由「创作工具星图 · 创作工坊」本地生成，输入未上传`);
+  L.push(`> 数据口径：工具星数/许可为 2026-11-16 前后公开快照，会浮动；参数为社区经验值，属起点参考。`, "");
+  L.push("## 1. 任务概要","");
+  L.push(`- 项目：${p.proj||"未命名项目"}`);
+  L.push(`- 主体：${p.subject||"原创角色"}`);
+  L.push(`- 目标：${goalNames}`);
+  L.push(`- 风格：${p.style}`);
+  L.push(`- 用途：${p.usage}${p.comm==="yes"?"（商用：需核对许可）":"（非商用）"}`);
+  L.push(`- 硬件：${p.vram===0?"无本地卡 / 走云端":p.vram+" GB 显存"}`);
+  if(p.extra) L.push(`- 补充：${p.extra}`);
+  L.push("","## 2. 提示词包（可直接粘贴）","");
+  const pk=promptPack(p);
+  L.push("### 正面提示词","", "```text", pk.pos, "```","");
+  L.push("### 负面提示词","", "```text", pk.neg, "```","");
+  L.push("### 三视图 / 重建基准图规格","", "```text", pk.tri, "```","");
+  L.push("### 参数建议","", pk.params,"");
+  L.push("## 3. 工具链 · 同功能优中选优","");
+  L.push("| 环节 | 首选 | 备选 | 判断依据 |","|---|---|---|---|");
+  const chosen=[], downgraded=[];
+  for(const grp of GROUPS){
+    const ranked=rankTools(grp,p);
+    const pool=ranked.filter(t=>applicable(t,p));
+    if(!pool.length) continue;
+    const first=pool[0], alts=pool.slice(1,3);
+    chosen.push(...pool);
+    for(const t of ranked) if(t.why && applicable(t,p)) downgraded.push({n:t.n,why:t.why});
+    L.push(`| ${grp.name} | [${first.n}](${first.u}) | ${alts.map(t=>`[${t.n}](${t.u})`).join(" / ")||"—"}`+
+           ` | ${esc(first.note)}${first.why?"；"+esc(first.why):""} |`);
+  }
+  if(downgraded.length){
+    L.push("","**适配提示（下列工具已降级，别直接开工）**","");
+    const seen=new Set();
+    for(const d of downgraded){
+      if(seen.has(d.n))continue;seen.add(d.n);
+      L.push(`- ${esc(d.n)}：${esc(d.why)}`);
+    }
+  }
+  L.push("","## 4. 执行清单","");
+  steps(p).forEach(s=>L.push(`- [ ] ${s}`));
+  L.push("","## 5. 许可证与避坑","");
+  if(p.comm==="yes"){
+    L.push("**商用模式：以下高风险项必须逐条确认**","");
+    const seen=new Set();
+    for(const t of chosen){
+      if(RISK[t.lic] && !seen.has(t.lic)){seen.add(t.lic);L.push(`- ${t.n}（${t.lic}）：${RISK[t.lic]}`);}
+    }
+    L.push("- 模型权重条款各不相同：商用前逐个查模型卡与训练数据版权。");
+    L.push("- 纯 AI 生成图像的著作权认定各地不一，建议保留人工修改痕迹与分层源文件。");
+    L.push("- 优先 MIT 的下游 3D 模型（TripoSR / TRELLIS）；做周边售卖前逐项确认。");
+  } else {
+    L.push("- 自己画画、公司内部使用、不分发：通常无 copyleft 义务，但仍建议留分层源文件。");
+    L.push("- 若日后转商用，重跑本工坊并选「需要商用」，会列出全部高风险许可项。");
+  }
+  L.push("- 高星 ≠ 还活着：ControlNet（34.1k ★）停在 2024-02，InstantMesh / Fooocus / A1111 也明显放缓；看 star 前先看 pushed_at。");
+  L.push("- 仓库会搬家：ComfyUI 已迁 Comfy-Org，blender-mcp 更名 mcp-for-blender，OrcaSlicer 迁组织账号；Blender / Krita 在 GitHub 只是镜像。");
+  L.push("- 最后一公里：AI 网格通常不能直接打印，漏面/非流形/薄壁/空腔必须靠 Blender + trimesh + UVtools 收尾。");
+  L.push("","## 6. 全部工具索引（星图收录，按需取用）","");
+  for(const grp of GROUPS){
+    L.push(`**${grp.name}**：` + grp.tools.map(t=>`[${t.n}](${t.u})`).join(" · "),"");
+  }
+  L.push("---","本任务包由本地静态页面生成，不含自动执行脚本；所有命令与菜单路径均为人工操作说明。");
+  return {text:L.join("\n"), prompt:`【正面】\n${pk.pos}\n\n【负面】\n${pk.neg}\n\n${pk.tri}\n\n${pk.params}`};
+}
+
+/* ---------------------------------------------------------------- 工具全览 */
+function renderTools(term){
+  term=(term||"").trim().toLowerCase();
+  let count=0;
+  $("toolList").innerHTML = GROUPS.map(grp=>{
+    const list=grp.tools.filter(t=>!term||(t.n+" "+t.note+" "+(t.roles||[]).join(" ")+" "+grp.name).toLowerCase().includes(term));
+    if(!list.length) return "";
+    count+=list.length;
+    return `<div class="group"><h3><span class="dot" style="background:${grp.color}"></span>${esc(grp.name)}`+
+      `<span class="cnt">${list.length} 个</span></h3><div class="tools">`+
+      list.map(t=>`<div class="tool">
+        <div class="tn"><a href="${t.u}" target="_blank" rel="noopener noreferrer">${esc(t.n)}</a>
+        <span class="badge ${t.tier}">${TIER_LABEL[t.tier]}</span></div>
+        <div class="meta">${esc(t.s)}　·　${esc(t.lic)}${t.vram?"　·　≥"+t.vram+"GB":""}</div>
+        <div class="note">${esc(t.note)}</div></div>`).join("")+
+      `</div></div>`;
+  }).join("") || `<p>没有匹配的工具，换个关键词试试。</p>`;
+  $("filter-status").textContent = `匹配 ${count} 个工具`;
+}
+
+/* ---------------------------------------------------------------- 本地留存 */
+const HKEY="atlas-studio-history";
+function getHist(){try{return JSON.parse(localStorage.getItem(HKEY)||"[]");}catch(e){return [];}}
+function setHist(a){try{localStorage.setItem(HKEY,JSON.stringify(a.slice(0,20)));return true;}catch(e){return false;}}
+function renderHist(){
+  const a=getHist();
+  $("hist").innerHTML = a.length ? `<ul>${a.map((h,i)=>
+    `<li><span class="t">${esc(h.time)}</span><span>${esc(h.name)}</span>
+     <button data-i="${i}" class="load">载入</button><button data-i="${i}" class="del">删除</button></li>`).join("")}</ul>`
+    : `<ul><li>暂无留存记录。</li></ul>`;
+  $("hist").querySelectorAll(".load").forEach(b=>b.addEventListener("click",()=>{
+    const h=getHist()[+b.dataset.i]; if(!h)return;
+    $("output").textContent=h.text; last={text:h.text,prompt:h.prompt,name:h.name};
+    ["copy","copyPrompt","download","save"].forEach(id=>$(id).disabled=false);
+    setStatus($("outStatus"),`已载入：${h.name}`);
+  }));
+  $("hist").querySelectorAll(".del").forEach(b=>b.addEventListener("click",()=>{
+    const a2=getHist(); a2.splice(+b.dataset.i,1); setHist(a2); renderHist();
+    setStatus($("outStatus"),"已删除该留存记录。");
+  }));
+}
+
+/* ---------------------------------------------------------------- 交互 */
+let last=null;
+function clip(text,okMsg){
+  const done=()=>setStatus($("outStatus"),okMsg);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallback(text,done));
+  } else fallback(text,done);
+}
+function fallback(text,done){
+  const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");done();}catch(e){setStatus($("outStatus"),"复制失败，请手动选中上面的文本复制。",true);}
+  document.body.removeChild(ta);
+}
+function download(){
+  if(!last)return;
+  const blob=new Blob([last.text],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=safeName(last.name)+".md";document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+  setStatus($("outStatus"),`已导出 ${a.download}`);
+}
+
+$("gen").addEventListener("click",()=>{
+  const p=profile();
+  if(!p.proj&&!p.subject){setStatus($("status"),"请至少填写项目名称或角色主体。",true);return;}
+  const pkg=buildPackage(p);
+  last={text:pkg.text,prompt:pkg.prompt,name:p.proj||p.subject||"创作任务包"};
+  $("output").textContent=pkg.text;
+  ["copy","copyPrompt","download","save"].forEach(id=>$(id).disabled=false);
+  setStatus($("status"),`已生成：${p.goals.length} 个目标、${GROUPS.reduce((n,g)=>n+g.tools.length,0)} 个工具纳入索引。`);
+  setStatus($("outStatus"),"任务包已就绪，可复制 / 导出 / 保存。");
+});
+$("clear").addEventListener("click",()=>{
+  ["proj","subject","extra"].forEach(id=>$(id).value="");
+  $("goals").querySelectorAll("input").forEach(i=>{i.checked=false;i.closest(".chip").classList.remove("on");});
+  $("style").selectedIndex=0;$("vram").value="12";$("usage").selectedIndex=0;$("comm").selectedIndex=0;
+  setStatus($("status"),"表单已清空。");
+});
+$("copy").addEventListener("click",()=>last&&clip(last.text,"任务包已复制到剪贴板。"));
+$("copyPrompt").addEventListener("click",()=>last&&clip(last.prompt,"提示词包已复制到剪贴板。"));
+$("download").addEventListener("click",download);
+$("save").addEventListener("click",()=>{
+  if(!last)return;
+  const a=getHist();a.unshift({time:stamp(),name:last.name,text:last.text,prompt:last.prompt});
+  if(!setHist(a)){setStatus($("outStatus"),"本地存储不可用（隐私模式？），请改用「导出 .md」。",true);return;}
+  renderHist();setStatus($("outStatus"),"已保存到本地留存。");
+});
+$("print").addEventListener("click",()=>window.print());
+$("q").addEventListener("input",e=>renderTools(e.target.value));
+
+buildGoals();renderTools("");renderHist();
+</script>
+</body>
+</html>

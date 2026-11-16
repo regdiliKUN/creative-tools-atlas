@@ -38,6 +38,7 @@ HTML = [
     "index.html",
     "github-creative-tools-atlas.html",
     "route-a-painter-workstation.html",
+    "studio.html",
 ]
 
 _results = []
@@ -188,6 +189,30 @@ def check_diagnostic_tool():
     check("工具/诊断器", ok, detail)
 
 
+def check_studio():
+    """创作工坊：工具覆盖、生成器、产出能力、输入转义、首页导航。"""
+    if not (BASE / "studio.html").is_file():
+        check("工具/创作工坊", False, "studio.html 缺失")
+        return
+    s = (BASE / "studio.html").read_text(encoding="utf-8")
+    tools = len(re.findall(r'\{n:"', s))
+    groups = len(re.findall(r'\{id:"[^"]+", name:"', s))
+    checks = {
+        "工具覆盖≥50": tools >= 50,
+        "环节≥7": groups >= 7,
+        "生成器": all(k in s for k in ("buildPackage", "promptPack", "steps", "rankTools")),
+        "产出能力": all(k in s for k in ("导出 .md", "复制任务包", "localStorage", "只复制提示词")),
+        "输入转义": "function esc(" in s,
+        "纯本地声明": "不上传" in s,
+    }
+    bad = [k for k, v in checks.items() if not v]
+    check("工具/创作工坊", not bad,
+          f"{tools} 工具 / {groups} 环节" if not bad else "失败:" + ",".join(bad))
+
+    home = (BASE / "index.html").read_text(encoding="utf-8")
+    check("导航/工坊入口", 'href="studio.html"' in home, "首页已接入" if 'href="studio.html"' in home else "首页无入口")
+
+
 # ---------------------------------------------------------------- 汇总
 def main():
     if not (BASE / "index.html").is_file() or not (BASE / "MANIFEST.md").is_file():
@@ -203,6 +228,7 @@ def main():
     check_scripts_ascii()
     check_iteration_archives()
     check_diagnostic_tool()
+    check_studio()
 
     passed = sum(1 for _, ok, _ in _results if ok)
     total = len(_results)
