@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>航线 A · 画师的数字工位 | 从空白画布到可重建的角色设定图</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0e17;
+    --bg-soft:#111625;
+    --panel:#151b2c;
+    --panel-2:#1a2134;
+    --line:#28324a;
+    --text:#e8edf7;
+    --muted:#98a4bd;
+    --dim:#6d7893;
+    --paint:#ff9e7d;
+    --model:#5fd0e6;
+    --ai:#b794ff;
+    --figure:#ffd479;
+    --ok:#7ee0a8;
+    --warn:#ffb26b;
+    --stop:#ff8a92;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 600px at 12% -8%, rgba(255,158,125,.12), transparent 62%),
+      radial-gradient(900px 520px at 92% 4%, rgba(183,148,255,.11), transparent 60%),
+      radial-gradient(700px 500px at 50% 100%, rgba(95,208,230,.07), transparent 65%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.35) 50%,transparent 50%),
+      radial-gradient(1px 1px at 70% 15%,rgba(255,255,255,.28) 50%,transparent 50%),
+      radial-gradient(1px 1px at 45% 70%,rgba(255,255,255,.22) 50%,transparent 50%),
+      radial-gradient(1px 1px at 85% 55%,rgba(255,255,255,.25) 50%,transparent 50%),
+      radial-gradient(1px 1px at 10% 85%,rgba(255,255,255,.2) 50%,transparent 50%);
+    background-size:420px 380px,520px 460px,610px 520px,480px 430px,560px 500px;
+    opacity:.5;
+  }
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 24px 100px}
+  a{color:inherit;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.9em;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:#cddcf2}
+  pre{background:#0a0e18;border:1px solid var(--line);border-left:3px solid var(--ai);border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:12.8px;line-height:1.75;color:#cddcf2}
+  pre code{background:none;border:none;padding:0;color:inherit}
+
+  header{padding:76px 0 40px;border-bottom:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.28em;color:var(--paint);text-transform:uppercase;margin-bottom:18px}
+  h1{font-size:clamp(32px,5vw,54px);line-height:1.18;margin:0 0 18px;font-weight:750;letter-spacing:-.02em}
+  h1 .grad{background:linear-gradient(95deg,var(--paint),var(--ai) 55%,var(--model));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:17px;color:var(--muted);max-width:780px;margin:0 0 22px}
+  .lede strong{color:var(--text)}
+  .meta{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font-size:12px;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.025);padding:6px 12px;border-radius:999px}
+  .chip strong{color:var(--text);font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px}
+  .stat{background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .stat b{display:block;font-size:27px;letter-spacing:-.02em;line-height:1.2;color:var(--paint)}
+  .stat span{font-size:12px;color:var(--dim)}
+
+  nav{position:sticky;top:0;z-index:20;background:rgba(11,14,23,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);margin:0 -24px;padding:12px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  nav a{font-size:12.5px;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid transparent;transition:.18s}
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.06);text-decoration:none;border-color:var(--line)}
+  nav .spacer{flex:1}
+  .search{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12.5px;width:180px;outline:none}
+  .search:focus{border-color:var(--ai)}
+  .search::placeholder{color:var(--dim)}
+
+  section{padding-top:66px;scroll-margin-top:64px}
+  .sec-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:10px}
+  .sec-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;font-size:17px;font-weight:700;border:1px solid;color:var(--accent);border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.04)}
+  .sec-head h2{font-size:26px;margin:0;letter-spacing:-.01em}
+  .sec-head .sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+  .sec-intro{color:var(--muted);font-size:14.5px;margin:16px 0 26px;max-width:900px;border-left:2px solid var(--line);padding-left:16px}
+  .sec-intro strong{color:var(--text)}
+
+  .key{margin:22px 0 28px;padding:18px 20px;border-radius:13px;border:1px solid rgba(255,158,125,.3);background:linear-gradient(100deg,rgba(255,158,125,.11),rgba(255,158,125,.025));font-size:14.5px}
+  .key b{color:var(--paint)}
+  .key.cool{border-color:rgba(95,208,230,.3);background:linear-gradient(100deg,rgba(95,208,230,.1),rgba(95,208,230,.02))}
+  .key.cool b{color:var(--model)}
+  .key.violet{border-color:rgba(183,148,255,.3);background:linear-gradient(100deg,rgba(183,148,255,.1),rgba(183,148,255,.02))}
+  .key.violet b{color:var(--ai)}
+
+  .stack{display:flex;flex-direction:column;gap:10px;margin:8px 0 24px}
+  .layer{display:grid;grid-template-columns:70px 1fr auto;gap:18px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:16px 20px;background:linear-gradient(100deg,var(--panel),var(--bg-soft));position:relative;transition:.2s}
+  .layer:hover{border-color:rgba(255,255,255,.24);transform:translateX(3px)}
+  .layer .lv{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--dim);letter-spacing:.08em}
+  .layer h4{margin:0 0 3px;font-size:16px}
+  .layer p{margin:0;font-size:13.2px;color:var(--muted)}
+  .layer .badge{font-size:11px;padding:5px 11px;border-radius:999px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
+  .layer .badge.must{color:var(--ok);border-color:rgba(126,224,168,.35);background:rgba(126,224,168,.08)}
+  .layer .badge.sometimes{color:var(--warn);border-color:rgba(255,178,107,.3);background:rgba(255,178,107,.07)}
+  .layer .badge.never{color:var(--stop);border-color:rgba(255,138,146,.3);background:rgba(255,138,146,.07)}
+  .layer.l0{border-left:3px solid var(--paint)}
+  .layer.l1{border-left:3px solid var(--ai)}
+  .layer.l2{border-left:3px solid var(--model)}
+  .layer.l3{border-left:3px solid var(--dim)}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  .card{background:linear-gradient(165deg,var(--panel),var(--bg-soft));border:1px solid var(--line);border-radius:16px;padding:21px 22px 20px;position:relative;overflow:hidden;transition:.2s}
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.22);box-shadow:0 14px 38px rgba(0,0,0,.32)}
+  .card::after{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent);opacity:.85}
+  .card h3{font-size:16.5px;margin:0 0 4px;letter-spacing:-.01em}
+  .card .idx{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--accent);letter-spacing:.1em}
+  .card .desc{font-size:13.3px;color:var(--muted);margin:8px 0 12px}
+  .card ul{margin:0;padding-left:17px;font-size:13px;color:var(--muted)}
+  .card li{margin:5px 0}
+  .card li b{color:var(--text);font-weight:600}
+  .card .foot{margin-top:13px;padding-top:11px;border-top:1px dashed var(--line);font-size:12.4px;color:var(--dim)}
+  .card .foot b{color:var(--accent)}
+
+  .tbl{width:100%;border-collapse:collapse;margin:14px 0 24px;font-size:13.3px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tbl th{background:var(--panel-2);text-align:left;padding:12px 15px;font-size:12px;letter-spacing:.05em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+  .tbl td{padding:11px 15px;border-bottom:1px solid rgba(40,50,74,.6);color:var(--muted);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:rgba(255,255,255,.022)}
+  .tbl td:first-child{color:var(--text);font-weight:600;white-space:nowrap}
+  .tbl .mono{font-family:ui-monospace,Consolas,monospace;font-size:12.2px;color:#cddcf2}
+  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;color:var(--muted);background:rgba(255,255,255,.03)}
+  .pill.ok{color:var(--ok);border-color:rgba(126,224,168,.3);background:rgba(126,224,168,.07)}
+  .pill.warn{color:var(--warn);border-color:rgba(255,178,107,.3);background:rgba(255,178,107,.07)}
+  .pill.stop{color:var(--stop);border-color:rgba(255,138,146,.3);background:rgba(255,138,146,.07)}
+
+  .steps{counter-reset:s;display:flex;flex-direction:column;gap:12px;margin:16px 0 26px}
+  .step{display:grid;grid-template-columns:38px 1fr;gap:16px;align-items:start;background:rgba(255,255,255,.022);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .step::before{counter-increment:s;content:counter(s);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:rgba(183,148,255,.13);border:1px solid rgba(183,148,255,.32);color:var(--ai);font-weight:700;font-size:13px}
+  .step h4{margin:2px 0 5px;font-size:14.5px}
+  .step p{margin:0;font-size:13.2px;color:var(--muted)}
+  .step p+p{margin-top:6px}
+
+  .contrast{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0 24px}
+  .track{border:1px solid var(--line);border-radius:15px;padding:20px 22px;background:linear-gradient(165deg,var(--panel),var(--bg-soft))}
+  .track.art{border-top:3px solid var(--paint)}
+  .track.recon{border-top:3px solid var(--model)}
+  .track .lab{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .track h3{margin:0 0 8px;font-size:18px}
+  .track.art h3{color:var(--paint)}
+  .track.recon h3{color:var(--model)}
+  .track p{font-size:13.2px;color:var(--muted);margin:0 0 12px}
+  .track ul{margin:0;padding-left:17px;font-size:13px;color:var(--muted)}
+  .track li{margin:5px 0}
+  .track .out{margin-top:14px;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.035);font-size:12.6px;color:var(--text)}
+
+  .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0 24px}
+  .rule{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:rgba(255,255,255,.02);font-size:13.2px;color:var(--muted)}
+  .rule .ic{flex:0 0 20px;font-size:14px;color:var(--ok);font-weight:700}
+  .rule b{color:var(--text)}
+  .rule.no .ic{color:var(--stop)}
+
+  .pit{display:grid;grid-template-columns:1fr;gap:10px;margin:16px 0 24px}
+  .pit-row{display:grid;grid-template-columns:230px 1fr;gap:16px;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:11px;padding:13px 16px;background:rgba(255,178,107,.04);font-size:13.2px}
+  .pit-row .sym{color:var(--warn);font-weight:600}
+  .pit-row .fix{color:var(--muted)}
+  .pit-row .fix b{color:var(--text)}
+
+  .note{margin-top:56px;padding:20px 22px;border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.018);font-size:12.6px;color:var(--dim)}
+  .note b{color:var(--muted)}
+  .note ul{padding-left:18px;margin:8px 0 0}
+  .note li{margin:4px 0}
+  .back{margin-top:22px;font-size:13px;color:var(--muted)}
+  .back a{color:var(--model);border-bottom:1px dotted}
+
+  @media(max-width:860px){
+    .stats,.grid,.grid.three,.contrast,.rules{grid-template-columns:1fr}
+    .layer{grid-template-columns:48px 1fr;gap:12px}
+    .layer .badge{grid-column:2;justify-self:start}
+    .pit-row{grid-template-columns:1fr;gap:4px}
+    .tbl{display:block;overflow-x:auto}
+  }
+
+  @media print {
+    :root{--bg:#fff;--bg-soft:#fff;--panel:#fff;--panel-2:#fff;--text:#111;--muted:#333;--dim:#555;--line:#bbb}
+    body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body::before{display:none!important}
+    nav,.search,.back,.foot{display:none!important}
+    a[title="返回导航首页"]{display:none!important}
+    header{background:none;border-bottom:1px solid #bbb;padding-top:0}
+    .card,.layer,.rule,.pit-row,.step,.tbl,.track,.note{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border:1px solid #bbb}
+    section{padding-top:24px}
+    a{text-decoration:none;color:#111}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" role="main" aria-label="画师数字工位手册">
+
+<header>
+  <div class="kicker">Route A · Deep Dive / 2026-11-16</div>
+  <h1>画师的<span class="grad">数字工位</span></h1>
+  <p class="lede">路线 A 的目标不是"用 AI 出图"，而是 <strong>把 AI 装进画布，让人始终握着笔</strong>。这一条投入最小、见效最快，同时产出下游 3D 建模最需要的燃料：一套干净、一致、可重建的角色设定图。</p>
+  <div class="meta">
+    <span class="chip">校准日期 <strong>2026-11-16</strong></span>
+    <span class="chip">Krita <strong>5.2.0+</strong></span>
+    <span class="chip">krita-ai-diffusion <strong>v1.53.0</strong></span>
+    <span class="chip">显存 <strong>≥ 6 GB</strong></span>
+    <span class="chip">许可 <strong>GPL-3.0 ×3</strong></span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>2</b><span>日常必装的东西（Krita + 插件）</span></div>
+    <div class="stat"><b>4 层</b><span>技术栈，后两层多数人不用碰</span></div>
+    <div class="stat"><b>4 把</b><span>核心手法：选区 / 实时 / 控制层 / 区域</span></div>
+    <div class="stat"><b>10–50 GB</b><span>模型与后端占用磁盘</span></div>
+  </div>
+</header>
+
+<nav>
+  <a href="#arch">① 架构</a>
+  <a href="#install">② 装机</a>
+  <a href="#tools">③ 四把刷子</a>
+  <a href="#sheet">④ 三视图</a>
+  <a href="#params">⑤ 参数速查</a>
+  <a href="#pitfall">⑥ 避坑</a>
+  <a href="#handoff">⑦ 交接 3D</a>
+  <a href="#license">⑧ 许可</a>
+  <span class="spacer"></span>
+  <input class="search" id="q" type="search" placeholder="筛选本页内容…" aria-label="筛选本页内容">
+  <span id="filter-status" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span>
+</nav>
+
+<section id="arch" style="--accent:var(--paint)">
+  <div class="sec-head">
+    <div class="sec-mark">01</div>
+    <div><h2>先看架构：四个项目其实是四层，不是四个软件</h2><p class="sub">上一份星图里那一串名字，很容易被误读成"要装四套东西"——这是这条路线上最大的认知负担</p></div>
+  </div>
+  <p class="sec-intro">实际情况是<strong>一条自上而下的调用链</strong>：你在 Krita 里画画，插件把你的选区、线稿、姿态翻译成条件，ComfyUI 在后台跑模型再把结果送回新图层。而 ControlNet 原始仓库只是这套技术的"论文与原型"，早已被 ComfyUI 和插件内置吸收，<strong>不需要安装、也不需要打开</strong>。</p>
+
+  <div class="stack">
+    <div class="layer l0">
+      <div class="lv">L0</div>
+      <div><h4 aria-level="3">Krita — 画布与笔</h4><p>笔刷引擎、图层、蒙版、矢量、漫画分格、逐帧动画、Python 插件接口。所有创作决策发生在这里。</p></div>
+      <div class="badge must">每天都要用</div>
+    </div>
+    <div class="layer l1">
+      <div class="lv">L1</div>
+      <div><h4 aria-level="3">krita-ai-diffusion — AI 变成一组面板控件</h4><p>已内置 ControlNet（涂鸦 / 线稿 / Canny / 姿态 / 深度 / 法线 / 分割）与 IP-Adapter（参考图 / 风格 / 换脸），包装成"控制层"和"参考图"图层。</p></div>
+      <div class="badge must">每天都要用</div>
+    </div>
+    <div class="layer l2">
+      <div class="lv">L2</div>
+      <div><h4 aria-level="3">ComfyUI — 被托管的推理后端</h4><p>插件首次配置时可一键装好并自动管理；也可以连接你已有的本地或远程服务器。平时它在后台，看不见节点图。</p></div>
+      <div class="badge sometimes">批量 / 工业化才亲自下场</div>
+    </div>
+    <div class="layer l3">
+      <div class="lv">L3</div>
+      <div><h4 aria-level="3">lllyasviel/ControlNet — 原始研究仓库</h4><p>34.1k ★ 但主分支停在 2024-02。它的价值是概念源头，截至 2026-11 的实际实现在 ComfyUI 节点与插件里。</p></div>
+      <div class="badge never">只读，别 clone</div>
+    </div>
+  </div>
+
+  <div class="key"><b>所以：装好 Krita + 插件，点一次 Configure，80% 的日常就齐了。</b> 只有当你要"一次批量出几十张三视图""复用固定工作流""接 3D 生成节点"时，才值得打开 ComfyUI 的节点图。这也是这条路线比 B、C 更适合画师入门的根本原因。</div>
+
+  <div class="grid three">
+    <div class="card" style="--accent:var(--paint)">
+      <div class="idx">L0 · Krita</div><h3><a href="https://github.com/KDE/krita" target="_blank" rel="noopener noreferrer">KDE/krita</a></h3>
+      <div class="desc">10.8k ★ · 2026-11-16 当天仍有提交 · GPL-3.0</div>
+      <ul><li>面向漫画 / 插画 / 概念设计 / VFX 的全流程绘画软件</li><li><b>GitHub 仅为镜像</b>，真实开发在 <code>invent.kde.org</code>，星数被严重低估</li><li>插件要求 <b>5.2.0+</b></li></ul>
+      <div class="foot">配套总览见 <b>github-creative-tools-atlas.html</b></div>
+    </div>
+    <div class="card" style="--accent:var(--ai)">
+      <div class="idx">L1 · 插件</div><h3><a href="https://github.com/Acly/krita-ai-diffusion" target="_blank" rel="noopener noreferrer">Acly/krita-ai-diffusion</a></h3>
+      <div class="desc">10.7k ★ · v1.53.0 · 最近提交 2026-10-03 · GPL-3.0</div>
+      <ul><li>设计目标写得很直白：<b>"为画画和修图的人，而不是为一句提示词出整图的人"</b></li><li>支持 Flux 2 / Z-Image / SD 1.5 / SDXL / Illustrious / 指令式编辑模型</li><li>可选 <a href="https://github.com/Acly/krita-ai-tools" target="_blank" rel="noopener noreferrer" style="color:var(--model)">krita-ai-tools</a> 补上 AI 抠图与对象选择</li></ul>
+      <div class="foot">官方文档 <b>docs.interstice.cloud</b></div>
+    </div>
+    <div class="card" style="--accent:var(--model)">
+      <div class="idx">L2 · 后端</div><h3><a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener noreferrer">Comfy-Org/ComfyUI</a></h3>
+      <div class="desc">147.1k ★ / 17.6k fork · 最近提交 2026-11-15 · GPL-3.0</div>
+      <ul><li>节点式扩散引擎，6343 次提交、225 个 tag，生态中枢</li><li><b>已迁至 Comfy-Org 组织</b>，旧 <code>comfyanonymous/ComfyUI</code> 会跳转</li><li>自定义后端需按官方清单装齐扩展与模型，否则连不上</li></ul>
+      <div class="foot">托管安装 <b>由插件代劳，无需手动</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="install" style="--accent:var(--ok)">
+  <div class="sec-head">
+    <div class="sec-mark">02</div>
+    <div><h2>装机清单：先看显卡，再决定模型档位</h2><p class="sub">官方 README 的硬指标是 NVIDIA ≥ 6 GB 显存；但 6 GB 和 12 GB 能跑的模型完全不是一回事</p></div>
+  </div>
+
+  <table class="tbl">
+    <thead><tr><th>显存 / 硬件</th><th>能舒服跑什么</th><th>建议</th></tr></thead>
+    <tbody>
+      <tr><td>6 GB（如 RTX 2060）</td><td>SD 1.5 流畅、SDXL 可用；Illustrious 动漫向模型也很合适</td><td>入门档。<span class="pill ok">够用</span> 优先选轻量模型，别一上来勾 Flux</td></tr>
+      <tr><td>8 GB</td><td>SDXL / Illustrious 舒适，量化版 Flux（fp8）可试</td><td>最主流档位，画师性价比最优</td></tr>
+      <tr><td>12 GB+</td><td>Flux 2 / Z-Image 等大模型、多控制层叠加、高分辨率放大</td><td><span class="pill ok">推荐</span> 想长期做就按这个配</td></tr>
+      <tr><td>AMD / Intel / Apple</td><td>ROCm（v1.51.0 起纳入托管安装）、XPU（Arc 8GB+）、MPS（Apple Silicon，macOS 14+）</td><td>可用但生态兼容性与速度弱于 CUDA</td></tr>
+      <tr><td>纯 CPU</td><td>能启动，官方原话 "very slow"</td><td><span class="pill stop">不建议</span> 只适合验证安装是否成功</td></tr>
+    </tbody>
+  </table>
+
+  <div class="key cool"><b>磁盘别只留 10 GB。</b> 官方说 10 GB 是下限、"50 GB+ 也不罕见"——插件会把 ComfyUI 本体、ControlNet / inpaint / CLIP Vision 等辅助模型、以及你勾选的主模型全部拉下来。第一次配置请留足空间和网络时间。</div>
+
+  <div class="steps">
+    <div class="step"><div><h4 aria-level="3">安装 Krita 5.2.0 或更新版本</h4><p><b>Windows 必须用 krita.org 官网直装包</b>，不要用 Microsoft Store / Steam 版；<b>Linux 用 AppImage，不要用 Flatpak</b>。这两条是官方安装文档专门点名的高频踩坑。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">下载插件 ZIP（不要解压）</h4><p>从 <a href="https://github.com/Acly/krita-ai-diffusion/releases/latest" target="_blank" rel="noopener noreferrer" style="color:var(--model)">Releases</a> 取最新包，当前为 <code>v1.53.0</code>。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">导入并重启</h4><p><code>Tools ▸ Scripts ▸ Import Python Plugin from File…</code> 选中 ZIP → 确认启用 → 重启 Krita → 新建或打开文档 → <code>Settings ▸ Dockers ▸ AI Image Generation</code> 打开面板。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">点 Configure，选后端</h4><p>三种后端见下表。多数人选<b>本地托管服务器</b>，勾选显卡类型与想要的模型工作负载，插件自动下载并随版本更新后端。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">先跑一张 512² 的小图验证链路</h4><p>确认能出图、结果能落到新图层，再开始勾大模型。<b>不要第一步就把 50 GB 模型全拉下来。</b></p></div></div>
+  </div>
+
+  <table class="tbl">
+    <thead><tr><th>后端选项</th><th>适合谁</th><th>代价</th></tr></thead>
+    <tbody>
+      <tr><td>本地托管服务器</td><td>有可用显卡、不想折腾的绝大多数人</td><td>免费；首次下载耗时耗盘 <span class="pill ok">首选</span></td></tr>
+      <tr><td>自定义 ComfyUI</td><td>已有 ComfyUI、想复用模型 / 接远程 GPU 工作站、要用自定义节点图</td><td>免费；需按 <code>docs.interstice.cloud/comfyui-setup</code> 装齐依赖</td></tr>
+      <tr><td>interstice.cloud</td><td>没独显，或想先试试再决定要不要投硬件</td><td>按量付费，作者用它支撑项目开发</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tools" style="--accent:var(--ai)">
+  <div class="sec-head">
+    <div class="sec-mark">03</div>
+    <div><h2>四把刷子：插件真正改变工作方式的地方</h2><p class="sub">不是"更好看的抽卡机"，而是把生成限制在你指定的地方、按你给的结构来</p></div>
+  </div>
+  <p class="sec-intro">README 里那句设计目标值得反复读：<strong>"从文字生成整张图是不可预测的；要得到你脑中的结果，就得把生成限制在选区内、用可变的强度细化已有内容、把文字聚焦到图像区域、并用参考图 / 草图 / 线稿 / 深度图来引导。"</strong> 下面四把刷子就是这句话的落地。</p>
+
+  <div class="grid">
+    <div class="card" style="--accent:var(--paint)">
+      <div class="idx">TOOL 01</div><h3>选区生成 Inpainting</h3>
+      <div class="desc">画师最常用的一把：圈一块地方，只改这一块，其余像素不动。</div>
+      <ul>
+        <li><b>Fill</b>：强度 100% 时的默认动作，选区内容按提示词重生成，并向周边颜色靠拢</li>
+        <li><b>Add Content / Remove Content</b>：加物件 / 无提示词抹除物体并自动延续背景</li>
+        <li><b>Expand</b>：扩画布补背景，构图从竖图改横图特别好用</li>
+        <li>快捷键 <code>Shift+Enter</code> 生成；结果进 <b>History</b>，挑中再 <b>Apply</b> 成新图层</li>
+      </ul>
+      <div class="foot">工作流意义 <b>生成结果永远是独立图层，可反复退回与手绘覆盖</b></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)">
+      <div class="idx">TOOL 02</div><h3>实时绘画 Live Painting</h3>
+      <div class="desc">你每画几笔，AI 就实时重解释整张画布，立刻看到"成片方向"。</div>
+      <ul>
+        <li>适合起稿阶段：随手几根色块，就能判断这个配色 / 构图值不值得深入</li>
+        <li>社区经验强度 <b>0.6–0.8</b>：既保留笔触，又给 AI 补充空间</li>
+        <li>配合 <b>Job Queue</b>：排队生成时你可以继续画，不用盯着进度条</li>
+      </ul>
+      <div class="foot">注意 <b>这是探索工具，不是精修工具；定稿仍要关掉它手工收</b></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)">
+      <div class="idx">TOOL 03</div><h3>控制层 Control Layers</h3>
+      <div class="desc">ControlNet 被做成"图层"——你画什么条件，AI 就长什么样，而不是抽卡。</div>
+      <ul>
+        <li><b>Scribble / Line art / Canny</b>：涂鸦、线稿、边缘 → 线稿上色、保持造型</li>
+        <li><b>Pose</b>：可编辑骨骼关键点，直接摆角色动作，不用重画</li>
+        <li><b>Depth / Normals</b>：空间层次与体积，做场景透视和光照方向</li>
+        <li><b>Segmentation</b>：色块分区指定"这里是天空 / 这里是衣服"</li>
+      </ul>
+      <div class="foot">这就是 <b>ControlNet 原仓库不用装</b> 的原因：能力已在这里</div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)">
+      <div class="idx">TOOL 04</div><h3>区域提示词 + 参考图</h3>
+      <div class="desc">Regions 给不同图层 / 区域各写各的提示词；IP-Adapter 用图而不是文字来定风格。</div>
+      <ul>
+        <li><b>Regions</b>：左边人物、右边背景、上方天空，各写各的，互不串味</li>
+        <li><b>IP-Adapter</b>：参考图做风格 / 构图迁移，甚至换脸；对系列作品统一画风极其关键</li>
+        <li><b>Edit Models</b>：直接用一句自然语言指令改图（"把白天改成夜景"）</li>
+        <li><b>Upscale</b>：分块放大到 4K / 8K 而不爆显存，细节同步增强</li>
+      </ul>
+      <div class="foot">进阶 <b>自定义预设可挂自己的 checkpoint、LoRA、采样器</b></div>
+    </div>
+  </div>
+
+  <div class="key violet"><b>一条从草图到成品的实操走法：</b> ① 新建 1024² 画布，手绘线稿单独一层 → ② 挂 <b>Line art 控制层</b>锁造型 → ③ 开 <b>Live Painting</b> 快速试 3–4 个配色方向 → ④ 关掉实时，用 <b>Regions</b> 把人物 / 服装 / 背景分开写提示词 → ⑤ 圈选区 <b>Fill</b> 逐个精修手部、脸部、配饰 → ⑥ <b>Upscale</b> 出终稿 → 全程保留原始线稿层，任何一步都能回退。</div>
+</section>
+
+<section id="sheet" style="--accent:var(--figure)">
+  <div class="sec-head">
+    <div class="sec-mark">04</div>
+    <div><h2>关键交付物：三视图，以及一个反直觉的冲突</h2><p class="sub">路线 A 之所以值得先走，是因为它产出的图能直接喂给路线 B 的图生 3D——但标准正好相反</p></div>
+  </div>
+  <p class="sec-intro">画师被训练成要画出<strong>好看的图</strong>：戏剧性光影、氛围、投影、背景、飘动的头发。而图生 3D 模型要的是<strong>可重建的图</strong>：平光、白底、无投影、单对象、轮廓完整、细长结构越少越好。这不是谁对谁错，是<strong>同一个工位必须产出两套图</strong>。</p>
+
+  <div class="contrast">
+    <div class="track art">
+      <div class="lab">Track 1 · For humans</div>
+      <h3>美术设定图 / 展示用</h3>
+      <p>给人看、给客户看、给自己的画集用。目标是"好看"与"表达"。</p>
+      <ul><li>可以有氛围光、投影、背景、景深</li><li>可以有多角色、道具、文字标注、装饰边框</li><li>可以强调质感与笔触，允许夸张透视</li><li>输出：PNG / PSD，用于展示与提案</li></ul>
+      <div class="out">注意：这类图拿去生 3D，高光会被烘焙成假纹理，背景和影子会被当成几何体。</div>
+    </div>
+    <div class="track recon">
+      <div class="lab">Track 2 · For reconstruction</div>
+      <h3>重建基准图 / 喂给模型用</h3>
+      <p>给 Hunyuan3D、TripoSR、TRELLIS 这类单图 / 多视图重建模型用。目标是"信息干净"。</p>
+      <ul><li>纯白或透明背景，无投影、无地面</li><li>均匀平光，主体居中且完整不裁切</li><li>一图一物，避免遮挡与细长结构</li><li>正面 / 侧面 / 背面尺寸一致、视角严格对齐</li></ul>
+      <div class="out">这才是路线 B 的输入。建议在 Krita 里单独存一套「重建版」图层组。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:17px;margin:32px 0 4px">重建基准图的 8 条硬规则</h3>
+  <p style="color:var(--muted);font-size:13.5px;margin:0 0 14px">综合 TripoSR / Hunyuan3D 与本地 3D 生成实践，属于跨模型通用的输入约束。</p>
+  <div class="rules">
+    <div class="rule"><span class="ic">✓</span><span><b>纯白或透明底</b>，无投影、无地面平面。先做一次背景去除再重建。</span></div>
+    <div class="rule"><span class="ic">✓</span><span><b>均匀平光</b>。硬光与高光会被烘焙进贴图，之后无法重新打光。</span></div>
+    <div class="rule"><span class="ic">✓</span><span><b>主体完整居中</b>，边缘不裁切；分辨率 512² 起步、理想 <b>1024² 以上</b>。</span></div>
+    <div class="rule"><span class="ic">✓</span><span><b>一图一物</b>。两个对象会被融合成一团；配件请单独出图、到 Blender 里再装。</span></div>
+    <div class="rule"><span class="ic">✓</span><span><b>3/4 侧视角优于正视图</b>：正视图没有深度线索，轻微旋转更容易读出体积。</span></div>
+    <div class="rule"><span class="ic">✓</span><span>多视图上传严格按 <b>正 → 侧 → 后</b> 顺序，顺序错会导致左右翻转 / 肢体扭曲。</span></div>
+    <div class="rule no"><span class="ic">✕</span><span><b>避开细长结构</b>：发丝、飘带、锁链、网格、细剑——重建时几乎必然塌掉，留到 Blender 手工补。</span></div>
+    <div class="rule no"><span class="ic">✕</span><span><b>别用文字 / logo / 复杂花纹</b>做关键特征：小字会糊成污渍，对称件会略微不对称。</span></div>
+  </div>
+
+  <h3 style="font-size:17px;margin:32px 0 4px">什么时候该下到 L2，亲自开 ComfyUI 搭三视图工作流</h3>
+  <p style="color:var(--muted);font-size:13.5px;margin:0 0 14px">单张设定图在 Krita 里手绘就够了。但"同一个角色稳定出现在正 / 侧 / 背三个视角"是工程问题，需要一致性约束与批量出图——这时才值得打开节点图。</p>
+  <div class="steps">
+    <div class="step"><div><h4 aria-level="3">结构化提示词打底</h4><p>核心标签：<code>character sheet, multiple views, front view, side view, back view, full body, white background, consistent design</code>；再把发型、瞳色、标志配饰、服装剪裁等<b>不可变特征锚点</b>逐项写死。负面词排除 <code>text, logo, deformed</code>。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">用 ControlNet 锁构图与比例</h4><p>预置一张标准三视图骨架图 / 深度图作为条件输入，强制三个视角按统一人体比例排列；换视角时只替换控制图，不换提示词。常用 <b>OpenPose</b> 与 <b>Depth / Canny</b> 两条线。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">用参考图锁身份</h4><p>三档方案见下表。轻量做法：把已确认的正面高清设定图送进 <b>IP-Adapter FaceID</b> 类节点作为全局参考，权重从 <b>0.6</b> 起试。最稳做法：20–30 张多角度图训一个小 LoRA，再用同一 LoRA 批量出三视图。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">锁 Seed 微调，再净化输出</h4><p>找到满意基底后锁定 Seed，只调 CFG / Denoise 做变体；生成后经抠图（Rembg / LaMa）、去水印、ColorMatch、FaceDetailer 处理，输出<b>干净 PNG</b>。这一步不能省——脏数据进重建流程等于埋雷。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">人工收尾（永远不能省）</h4><p>把所有视图并排，统一高光、接缝、花纹细节。<b>AI 省的是"从 0 到 60 分"的时间，审美判断和细节统一仍然是人做的。</b></p></div></div>
+  </div>
+
+  <table class="tbl">
+    <thead><tr><th>一致性方案</th><th>成本</th><th>稳定性 / 适合场景</th></tr></thead>
+    <tbody>
+      <tr><td>IP-Adapter / FaceID</td><td>零训练，即插即用</td><td>中等；极端角度会漂。权重 0.6–0.8，<b>&gt;0.8 画面僵硬发糊、&lt;0.5 锁不住脸</b></td></tr>
+      <tr><td>InstantID / PuLID</td><td>零训练，多装几个节点</td><td>较好；脸部保真更强，常与 IP-Adapter 叠用（一个管脸、一个管风格体态）</td></tr>
+      <tr><td>自训角色 LoRA</td><td>20–30 张多角度图，微调约半小时</td><td><b>最稳</b>；系列化 / 量产 / 长期角色的正解，训练集里必须包含多角度</td></tr>
+    </tbody>
+  </table>
+
+  <div class="key"><b>要亲手装 ComfyUI 节点时，认这几个仓库：</b> <a href="https://github.com/Fannovel16/comfyui_controlnet_aux" target="_blank" rel="noopener noreferrer" style="color:var(--model)">comfyui_controlnet_aux</a>（4.3k ★，2026-11 仍活跃，65 个预处理器：OpenPose / LineArt / DepthAnything / Canny…）、<a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus" target="_blank" rel="noopener noreferrer" style="color:var(--model)">ComfyUI_IPAdapter_plus</a>（6.17k ★，<span class="pill warn">主分支约 2025-04 后停更</span>，星数还在涨但代码已静默，属"高星暗星"）、同作者的 InstantID 1.8k / PuLID 911 / essentials 1.2k。<b>注意：这些节点只在 L2 手动搭图时才需要；Krita 插件已把等价能力打包好了。</b></div>
+</section>
+
+<section id="params" style="--accent:var(--model)">
+  <div class="sec-head">
+    <div class="sec-mark">05</div>
+    <div><h2>参数速查：官方口径与社区经验值分开看</h2><p class="sub">下表中标注"经验值"的数字来自社区教程，是起点不是定律，务必按自己的模型微调</p></div>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>参数</th><th>建议值</th><th>作用与出处</th></tr></thead>
+    <tbody>
+      <tr><td>强度 Strength</td><td class="mono">100% = Fill</td><td>官方：有选区时 100% 触发 Fill。经验分区：<b>0–30% 微调 / 30–70% 风格转换 / 70–100% 大幅重绘</b></td></tr>
+      <tr><td>实时绘画强度</td><td class="mono">0.6 – 0.8</td><td>经验值：保住笔触又给 AI 发挥空间</td></tr>
+      <tr><td>IP-Adapter 权重</td><td class="mono">0.6 – 0.8</td><td>经验值：偏高过拟合、构图僵死；偏低变脸</td></tr>
+      <tr><td>ControlNet 权重</td><td class="mono">0.4 – 1.2</td><td>经验值：线稿类可高、姿态类宜低，需按控制层类型调</td></tr>
+      <tr><td>生成步数 Steps</td><td class="mono">20 – 30</td><td>经验值：快速预览用下限，定稿再提高</td></tr>
+      <tr><td>工作分辨率</td><td class="mono">512 – 1024</td><td>经验值：先小图试方向，再 Upscale 到 4K / 8K 出终稿（插件分块放大不爆显存）</td></tr>
+      <tr><td>Seed / CFG / Denoise</td><td class="mono">先锁后调</td><td>三视图一致性关键：锁定基底后只动 CFG 与 Denoise，不要三张图各抽各的</td></tr>
+      <tr><td>变体通配符</td><td class="mono">{A|B|C}</td><td>社区用法：一次生成多个配色 / 服装方案供挑选</td></tr>
+    </tbody>
+  </table>
+  <div class="key cool"><b>最容易被忽略的两个功能：History 和 Job Queue。</b> 前者保存每次结果与当时的提示词，可随时回溯对比；后者让你排队生成时继续画。这两个决定了它是"工作流"还是"抽卡器"。</div>
+</section>
+
+<section id="pitfall" style="--accent:var(--warn)">
+  <div class="sec-head">
+    <div class="sec-mark">06</div>
+    <div><h2>避坑清单：照着排，能省掉第一个下午</h2><p class="sub">多数问题不在模型质量，而在安装环境与版本细节</p></div>
+  </div>
+  <div class="pit">
+    <div class="pit-row"><div class="sym">卡在 "Starting Server" 转圈</div><div class="fix">v1.52.0 升级后的已知连接 bug，<b>v1.52.1 已修复</b>。装最新版即可；若仍卡，查 Windows 防火墙是否拦了本地端口与 Python 环境路径。</div></div>
+    <div class="pit-row"><div class="sym">插件装了却找不到面板</div><div class="fix">确认 Krita ≥ 5.2.0、ZIP <b>未解压</b>、导入后已重启、且在"有文档打开"的状态下才去 <code>Settings ▸ Dockers</code> 勾选。</div></div>
+    <div class="pit-row"><div class="sym">Windows Store / Steam 版 Krita</div><div class="fix">官方点名不兼容，改装 <b>krita.org 直装包</b>；Linux 同理弃 Flatpak、改 <b>AppImage</b>。</div></div>
+    <div class="pit-row"><div class="sym">自定义 ComfyUI 连不上</div><div class="fix">插件要求特定扩展与模型齐备，按 <code>docs.interstice.cloud/comfyui-setup</code> 逐项核对；若 ComfyUI 已在 Krita 启动前运行，插件会自动尝试连接。拿不准就用托管安装。</div></div>
+    <div class="pit-row"><div class="sym">一上手就勾 Flux / Z-Image</div><div class="fix">官方标注这类模型"相对大且慢，需要强力 GPU"。<b>6 GB 卡请先跑 SD 1.5 / SDXL / Illustrious</b>，确认链路通了再加大模型。</div></div>
+    <div class="pit-row"><div class="sym">求助于 Krita 官方渠道</div><div class="fix">README 明确写着<b>官方 Krita 渠道不受理此插件问题</b>；去项目 GitHub Discussions / Discord / FAQ 页。</div></div>
+    <div class="pit-row"><div class="sym">抠图 / 去背景很麻烦</div><div class="fix">装同作者的 <b>krita-ai-tools</b>，补上 AI 分割与对象选择；这正好也是产出"重建基准图"要用的功能。</div></div>
+    <div class="pit-row"><div class="sym">照着高星节点仓库装</div><div class="fix">ControlNet 原仓库（34.1k ★）停更于 2024-02、ComfyUI_IPAdapter_plus（6.17k ★）约 2025-04 后静默、InstantMesh 停在 2024。<b>先看 pushed_at 再 clone。</b></div></div>
+  </div>
+</section>
+
+<section id="handoff" style="--accent:var(--figure)">
+  <div class="sec-head">
+    <div class="sec-mark">07</div>
+    <div><h2>交接给路线 B：这套工位最终要交出什么</h2><p class="sub">把 A 与"一张立绘 → 一尊手办"那条线接起来</p></div>
+  </div>
+  <p class="sec-intro">路线 A 的终点不是一张漂亮插画，而是<strong>一套能驱动几何重建的干净角色基准图</strong>。只要第 ④ 节的 8 条规则守住，下游几乎不用返工；反之，再强的 3D 模型也救不回一张带投影和复杂背景的图。</p>
+
+  <div class="steps">
+    <div class="step"><div><h4 aria-level="3">A 交付</h4><p>白底 / 透明底、平光、单对象、正面或 3/4 视角、1024²+ 的角色基准图；复杂角色再补正 / 侧 / 后三视图（尺寸一致、顺序固定）。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">图生 3D</h4><p>轻量验证用 <b>TripoSR</b>（~6 GB / 亚秒级 / MIT）；中文生态与手办适配看 <b>Hunyuan3D-2</b>；资产级质量与干净许可看 <b>TRELLIS / TRELLIS.2</b>（MIT）。输出 GLB / OBJ。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">修模收尾</h4><p>Blender 修漏面与拆件 → <b>trimesh</b> 查水密 / 非流形 / 内部空腔 → 重拓扑与减面。AI 吐出的网格是"水密但密集的三角面"，没有合理布线，不能直接当可动手办用。</p></div></div>
+    <div class="step"><div><h4 aria-level="3">打印</h4><p>FDM 走 <b>OrcaSlicer</b>；树脂光固化走 <b>UVtools</b> 检修切片文件（岛屿、吸盘、空腔），把通宵翻车提前拦下。</p></div></div>
+  </div>
+  <div class="key"><b>一句话记住这条路线：</b> A 负责"把角色定义清楚"，B 负责"把定义变成实体"。定义阶段偷的懒，会在打印阶段以十倍代价还回来。</div>
+</section>
+
+<section id="license" style="--accent:var(--stop)">
+  <div class="sec-head">
+    <div class="sec-mark">08</div>
+    <div><h2>许可证：内部用没顾虑，做产品要当心</h2><p class="sub">三个软件都是 GPL-3.0，但模型权重各有各的条款</p></div>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>对象</th><th>许可</th><th>要注意什么</th></tr></thead>
+    <tbody>
+      <tr><td>Krita / 插件 / ComfyUI</td><td><span class="pill warn">GPL-3.0</span></td><td>自己画画、公司内部使用、不分发：无义务。<b>若把代码嵌入自己分发的商业产品</b>，需履行 copyleft（开源衍生代码）。</td></tr>
+      <tr><td>模型权重</td><td><span class="pill stop">各不相同</span></td><td>SDXL / Illustrious / Flux 2 / Z-Image / 各类社区 LoRA 条款互不相同，商用前逐个查模型卡与训练数据版权。</td></tr>
+      <tr><td>产出图像</td><td><span class="pill">按司法辖区</span></td><td>纯 AI 生成的著作权认定各地不一。商业项目建议<b>保留人工修改痕迹与分层源文件</b>——既是合规证据，也是质量保证。</td></tr>
+      <tr><td>下游 3D 模型许可</td><td><span class="pill ok">优先 MIT</span></td><td>TRELLIS / TripoSR 是干净 MIT；Hunyuan3D 社区许可有地域排除条款；OrcaSlicer / UVtools 是 AGPL。做周边售卖前逐项确认。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="note">
+  <b>数据来源与口径</b>
+  <ul>
+    <li>星数、版本、提交日期为 <b>2026-11-16</b> 前后 GitHub 仓库页与公开统计快照；会浮动，用于横向比较而非精确审计。</li>
+    <li>功能与硬件要求主要依据 <b>Acly/krita-ai-diffusion README</b>、<b>docs.interstice.cloud</b> 安装文档、<b>Comfy-Org/ComfyUI</b> 与 <b>KDE/krita</b> 仓库页。</li>
+    <li>标注为"经验值"的参数、三视图提示词模板与一致性权重区间来自社区教程与工程实践汇总，属起点参考，非官方保证。</li>
+    <li>重建基准图的输入约束综合自 TripoSR / Hunyuan3D / 本地 3D 生成实践，不同模型细节略有差异。</li>
+    <li>本页不含任何自动执行脚本；所有命令与菜单路径均为人工操作说明。</li>
+  </ul>
+  <div class="back">← 返回总览：<a href="github-creative-tools-atlas.html">GitHub 创作工具星图 · 4 大分类 / 23 个项目 / 3 条航线</a></div>
+</div>
+
+</div>
+<script>
+  const q=document.getElementById('q');
+  q.addEventListener('input',function(){
+    const t=this.value.trim().toLowerCase();
+    let totalShown=0;
+    document.querySelectorAll('section').forEach(s=>{
+      const cards=s.querySelectorAll('.card,.layer,.rule,.pit-row,.step,.tbl tbody tr');
+      const hit=s.textContent.toLowerCase().includes(t);
+      cards.forEach(c=>{const ok=(!t||c.textContent.toLowerCase().includes(t));c.style.display=ok?'':'none';if(ok)totalShown++;});
+      s.style.display=(!t||hit)?'':'none';
+    });
+    const st=document.getElementById('filter-status');if(st)st.textContent='匹配 '+totalShown+' 个区块';
+  });
+</script>
+<a href="index.html" title="返回导航首页" style="position:fixed;right:22px;bottom:22px;z-index:99;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:rgba(21,27,44,.94);border:1px solid #28324a;color:#b794ff;font-size:13px;text-decoration:none;backdrop-filter:blur(8px)" onmouseover="this.style.borderColor='#b794ff'" onmouseout="this.style.borderColor='#28324a'">&#8592; 导航首页</a>
+</body>
+</html>

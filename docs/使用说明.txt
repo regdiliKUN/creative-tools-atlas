@@ -1,0 +1,78 @@
+创作工具星图 · 本地软件包（v1.6.0）
+==========================================
+
+【快速开始】
+  双击本文件夹内的  创作工具星图.exe
+  会以「应用窗口」方式打开应用首页（index.html）——无地址栏、无标签栏，
+  观感像独立软件，而不是弹出一个浏览器页面。
+  实现：优先调用本机 Edge / Chrome 的 --app 模式；若都没有则回退系统浏览器。
+
+【应用内容】
+  index.html                        应用导航首页
+  github-creative-tools-atlas.html  报告一：GitHub 创作工具星图（4 大分类 / 23 个项目 / 3 条航线）
+  route-a-painter-workstation.html  报告二：画师的数字工位（航线 A 实操手册）
+  以上三个 HTML 互相链接，请保持在同一文件夹内。
+
+【桌面快捷方式】
+  已在桌面创建「创作工具星图」快捷方式，目标直接指向本文件夹内的 exe。
+  右键该快捷方式 →「打开文件所在位置」，可定位到本文件夹并选中 exe。
+
+  若快捷方式被误删，在本文件夹的「快捷方式工具」目录打开 PowerShell 执行：
+    powershell -ExecutionPolicy Bypass -File rebuild-shortcut.ps1
+  校验快捷方式指向：
+    powershell -ExecutionPolicy Bypass -File rebuild-shortcut.ps1 -ReadBack
+  校验软件包完整性（比对 MANIFEST.md）：
+    powershell -ExecutionPolicy Bypass -File verify-package.ps1
+  脚本会自动解析真实桌面（兼容重定向 / OneDrive），无需手工填路径。
+
+【运行特性】
+  · 内容本地可读、无需联网、不上传任何数据；报告内 GitHub 外链仅在点击时联网。
+  · exe 是本地启动器：打开应用窗口后即结束，不常驻后台、不占用端口。
+    关闭窗口后可立即再次双击打开（连点 5 秒内的重复启动会被自动去重）。
+  · 支持中文与空格路径（URL 已做编码处理）。
+  · 若 index.html 意外缺失，会显示友好的诊断页（写在系统临时目录，不污染软件包）。
+  · 若应用窗口未自动打开：手动双击 index.html 可获得完全相同的内容。
+  · 关于内置浏览器：exe 是独立程序，无法调用 WorkBuddy 应用内部的内置浏览器
+    （两者是不同进程）；内置浏览器仅用于在 WorkBuddy 中预览这些 HTML 文件。
+
+【文件完整性】
+  MANIFEST.md 记录了各文件的 SHA-256 校验基线（含全部迭代记录与工具脚本）。
+  用「快捷方式工具/verify-package.ps1」可随时核对，输出 VERIFY_OK 即为完好。
+  校验基线由构建脚本 build_manifest.py 生成；正常用户无需重新生成，
+  仅当自行改动包内文件后，才需用该脚本刷新基线（脚本在使用者的构建环境中）。
+  维护注意：快捷方式工具/ 下的 .ps1 脚本必须保持纯 ASCII 内容（中文请写进
+  UTF-8 JSON 或用字符码拼接）。PowerShell 5.1 会按 ANSI 读取无 BOM 的 .ps1，
+  混入中文会导致解析失败。
+
+【故障自查】
+  若双击 exe 或桌面快捷方式没有反应，在「快捷方式工具」目录打开 PowerShell 执行：
+    powershell -ExecutionPolicy Bypass -File diagnose.ps1
+  它会依次检查：核心文件是否齐全、浏览器是否可用（缺失为警告，不影响回退）、
+  桌面快捷方式是否精确指向本包 exe、_internal 运行依赖是否完整、
+  MANIFEST 里登记的文件是否都未被改动。
+  输出 DIAG_OK 表示一切正常；DIAG_FAIL 会点名问题并给出修复建议。
+
+【卸载 / 移除】
+  1. 删除桌面「创作工具星图」快捷方式。
+  2. 删除整个「创作工具星图」文件夹即可，无注册表残留、无系统级安装。
+
+【目录结构】
+  创作工具星图/
+    创作工具星图.exe      ← 启动入口
+    _internal/            ← 运行依赖（请勿删除或单独移动）
+    index.html            ← 应用首页
+    github-creative-tools-atlas.html
+    route-a-painter-workstation.html
+    icon.ico / icon.png   ← 应用图标
+    MANIFEST.md           ← 文件清单与校验基线
+    快捷方式工具/         ← 快捷方式创建/重建/解析/校验脚本
+      diagnose.ps1        ← 一键故障诊断（双击无反应时先跑它）
+    使用说明.txt          ← 本文件
+    迭代记录.md           ← 第一轮 20 轮迭代记录
+    迭代记录-v2.md        ← 第二轮 20 轮迭代记录（应用窗口版）
+    迭代记录-v3.md        ← 第三轮 20 轮迭代记录
+    迭代记录-v4.md        ← 第四轮 20 轮迭代记录
+    迭代记录-v5.md        ← 第五轮 20 轮迭代记录
+    CHANGELOG.md          ← 版本变更日志（v1.0 → v1.5）
+
+版本：v1.6.0    构建日期：2026-11-17

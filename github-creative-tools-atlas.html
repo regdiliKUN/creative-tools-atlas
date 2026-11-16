@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub 创作工具星图 · 绘画 / 建模 / 手办角色</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0e17;
+    --bg-soft:#111625;
+    --panel:#151b2c;
+    --panel-2:#1a2134;
+    --line:#28324a;
+    --text:#e8edf7;
+    --muted:#98a4bd;
+    --dim:#6d7893;
+    --paint:#ff9e7d;
+    --model:#5fd0e6;
+    --ai:#b794ff;
+    --figure:#ffd479;
+    --ok:#7ee0a8;
+    --warn:#ffb26b;
+    --stop:#ff8a92;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 600px at 12% -8%, rgba(183,148,255,.13), transparent 62%),
+      radial-gradient(900px 520px at 92% 4%, rgba(95,208,230,.11), transparent 60%),
+      radial-gradient(700px 500px at 50% 100%, rgba(255,158,125,.07), transparent 65%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.35) 50%,transparent 50%),
+      radial-gradient(1px 1px at 70% 15%,rgba(255,255,255,.28) 50%,transparent 50%),
+      radial-gradient(1px 1px at 45% 70%,rgba(255,255,255,.22) 50%,transparent 50%),
+      radial-gradient(1px 1px at 85% 55%,rgba(255,255,255,.25) 50%,transparent 50%),
+      radial-gradient(1px 1px at 10% 85%,rgba(255,255,255,.2) 50%,transparent 50%);
+    background-size:420px 380px,520px 460px,610px 520px,480px 430px,560px 500px;
+    opacity:.5;
+  }
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 24px 100px}
+  a{color:inherit;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- hero ---------- */
+  header{padding:76px 0 40px;border-bottom:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.28em;color:var(--ai);text-transform:uppercase;margin-bottom:18px}
+  h1{font-size:clamp(32px,5vw,54px);line-height:1.18;margin:0 0 18px;font-weight:750;letter-spacing:-.02em}
+  h1 .grad{background:linear-gradient(95deg,var(--paint),var(--ai) 45%,var(--model));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:17px;color:var(--muted);max-width:760px;margin:0 0 28px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font-size:12px;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.025);padding:6px 12px;border-radius:999px}
+  .chip strong{color:var(--text);font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px}
+  .stat{background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .stat b{display:block;font-size:27px;letter-spacing:-.02em;line-height:1.2}
+  .stat span{font-size:12px;color:var(--dim)}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:20;background:rgba(11,14,23,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);margin:0 -24px;padding:12px 24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  nav a{font-size:13px;color:var(--muted);padding:6px 13px;border-radius:8px;border:1px solid transparent;transition:.18s}
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.06);text-decoration:none;border-color:var(--line)}
+  nav .spacer{flex:1}
+  .search{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:190px;outline:none}
+  .search:focus{border-color:var(--ai)}
+  .search::placeholder{color:var(--dim)}
+
+  /* ---------- section ---------- */
+  section{padding-top:64px;scroll-margin-top:64px}
+  .sec-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:10px}
+  .sec-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;font-size:20px;font-weight:700;border:1px solid}
+  .sec-head h2{font-size:27px;margin:0;letter-spacing:-.01em}
+  .sec-head .sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+  .sec-intro{color:var(--muted);font-size:14.5px;margin:16px 0 26px;max-width:900px;border-left:2px solid var(--line);padding-left:16px}
+  .cat-paint .sec-mark{color:var(--paint);border-color:rgba(255,158,125,.4);background:rgba(255,158,125,.09)}
+  .cat-model .sec-mark{color:var(--model);border-color:rgba(95,208,230,.4);background:rgba(95,208,230,.09)}
+  .cat-ai .sec-mark{color:var(--ai);border-color:rgba(183,148,255,.4);background:rgba(183,148,255,.09)}
+  .cat-figure .sec-mark{color:var(--figure);border-color:rgba(255,212,121,.4);background:rgba(255,212,121,.09)}
+
+  /* ---------- cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .card{background:linear-gradient(165deg,var(--panel),var(--bg-soft));border:1px solid var(--line);border-radius:16px;padding:22px 22px 20px;position:relative;overflow:hidden;transition:.2s}
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.22);box-shadow:0 14px 38px rgba(0,0,0,.32)}
+  .card::after{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent);opacity:.8}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .card h3{font-size:17.5px;margin:0 0 4px;letter-spacing:-.01em}
+  .card h3 a{border-bottom:1px dashed rgba(255,255,255,.25)}
+  .repo{font-size:11.5px;color:var(--dim);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}
+  .starrow{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
+  .pill{font-size:11px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;background:rgba(255,255,255,.03);color:var(--muted)}
+  .pill.star{color:var(--figure);border-color:rgba(255,212,121,.35);background:rgba(255,212,121,.08);font-weight:600}
+  .pill.live{color:var(--ok);border-color:rgba(126,224,168,.3);background:rgba(126,224,168,.07)}
+  .pill.slow{color:var(--warn);border-color:rgba(255,178,107,.3);background:rgba(255,178,107,.07)}
+  .pill.cold{color:var(--stop);border-color:rgba(255,138,146,.3);background:rgba(255,138,146,.07)}
+  .row{display:flex;gap:10px;font-size:13.4px;margin:9px 0;color:var(--muted)}
+  .row .k{flex:0 0 52px;color:var(--dim);font-size:12px;padding-top:2px}
+  .row .v{flex:1}
+  .why{margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);font-size:13.2px;color:var(--text)}
+  .why b{color:var(--accent);font-weight:600}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+  .tag{font-size:11px;color:var(--dim);border:1px solid var(--line);padding:3px 8px;border-radius:6px}
+  .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:14px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:3px;opacity:.75}
+
+  /* ---------- extras ---------- */
+  .extras{margin-top:20px;border:1px dashed var(--line);border-radius:14px;padding:18px 20px;background:rgba(255,255,255,.02)}
+  .extras h4{margin:0 0 10px;font-size:13.5px;color:var(--muted);letter-spacing:.06em}
+  .extras ul{margin:0;padding-left:18px;color:var(--muted);font-size:13.2px}
+  .extras li{margin:5px 0}
+  .extras a{color:var(--model);border-bottom:1px dotted}
+
+  /* ---------- routes ---------- */
+  .route{background:linear-gradient(150deg,var(--panel),var(--bg-soft));border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:16px}
+  .route-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .route-num{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:700;background:rgba(183,148,255,.14);color:var(--ai);border:1px solid rgba(183,148,255,.3)}
+  .route h3{margin:0;font-size:17px}
+  .route .who{font-size:12.5px;color:var(--dim);margin-left:auto}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 12px}
+  .step{font-size:12.5px;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text)}
+  .arrow{color:var(--ai);font-size:14px}
+  .route p{font-size:13.4px;color:var(--muted);margin:0}
+  .route p strong{color:var(--text)}
+
+  /* ---------- pitfalls ---------- */
+  .pit{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .pit-item{border:1px solid var(--line);border-radius:14px;padding:18px 20px;background:rgba(255,255,255,.025)}
+  .pit-item h4{margin:0 0 8px;font-size:14.5px;color:var(--warn)}
+  .pit-item p{margin:0;font-size:13.2px;color:var(--muted)}
+
+  footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim)}
+  footer p{margin:6px 0}
+
+  @media(max-width:820px){
+    .grid,.pit,.stats{grid-template-columns:1fr}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .wrap{padding:0 16px 60px}
+    nav{margin:0 -16px;padding:10px 16px}
+    .search{width:100%}
+    .route .who{display:none}
+  }
+
+  @media print {
+    :root{--bg:#fff;--bg-soft:#fff;--panel:#fff;--panel-2:#fff;--text:#111;--muted:#333;--dim:#555;--line:#bbb}
+    body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body::before{display:none!important}
+    nav,.search,.back,.foot{display:none!important}
+    a[title="返回导航首页"]{display:none!important}
+    header{background:none;border-bottom:1px solid #bbb;padding-top:0}
+    .card,.layer,.rule,.pit-row,.step,.tbl,.track,.note{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border:1px solid #bbb}
+    section{padding-top:24px}
+    a{text-decoration:none;color:#111}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" role="main" aria-label="GitHub 创作工具星图报告">
+
+<header>
+  <div class="kicker">Field Notes / 2026.11.16</div>
+  <h1>GitHub 创作工具<span class="grad">星图</span><br>从一支笔，到一尊手办</h1>
+  <p class="lede">把 GitHub 上分散的星点连成一条航线：绘画 → 建模 → AI 图生 3D → 角色 / 手办落地。每个项目都标注了真实坐标（仓库、星数、最近活跃时间），并附上"为什么值得你关注"的判断，而不是一份冷冰冰的收藏夹。</p>
+  <div class="meta">
+    <span class="chip">数据快照 <strong>2026-11-16 前后</strong></span>
+    <span class="chip">覆盖 <strong>4 个星区 · 23 个主项目</strong></span>
+    <span class="chip">含 <strong>3 条推荐路线</strong></span>
+    <span class="chip">含 <strong>许可证 / 硬件 / 停更 避坑</strong></span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>147.1k</b><span>最高星数 · ComfyUI</span></div>
+    <div class="stat"><b>4</b><span>分类星区</span></div>
+    <div class="stat"><b>23</b><span>精选主项目</span></div>
+    <div class="stat"><b>3</b><span>可走通的创作路线</span></div>
+  </div>
+</header>
+
+<nav>
+  <a href="#paint">◆ 绘画</a>
+  <a href="#model">◆ 建模</a>
+  <a href="#ai">◆ AI 图生 3D</a>
+  <a href="#figure">◆ 手办 / 角色</a>
+  <a href="#routes">◇ 选方向</a>
+  <a href="#pitfalls">◇ 避坑</a>
+  <span class="spacer"></span>
+  <input class="search" id="q" type="search" placeholder="筛选项目 / 关键词…" aria-label="筛选项目">
+  <span id="filter-status" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span>
+</nav>
+
+<!-- ============ 1 绘画 ============ -->
+<section id="paint" class="cat-paint">
+  <div class="sec-head">
+    <div class="sec-mark">◆</div>
+    <div><h2>一、绘画 / 数字绘图</h2><p class="sub">从纯手绘到 AI 辅助，画笔这一端的地基</p></div>
+  </div>
+  <p class="sec-intro">这一区可以分成两派：<b>「手绘派」</b>讲究笔刷、图层、逐帧控制（Krita、Aseprite、OpenToonz）；<b>「生成派」</b>把 AI 变成可编排的流水线（ComfyUI）。中间那座桥就是 krita-ai-diffusion——它让 AI 待在画师的画布里，而不是让画师跑去 AI 的网页里。ControlNet 则是"姿势 / 线稿可控"这项能力的源头，虽然原仓库已封存。</p>
+  <div class="grid" style="--accent:var(--paint)">
+
+    <div class="card" style="--accent:var(--paint)" data-search="ComfyUI Comfy-Org 节点 工作流 AI 生成 图像 视频 3D">
+      <div class="card-top"><div><h3><a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener noreferrer">ComfyUI</a></h3><div class="repo">github.com/Comfy-Org/ComfyUI</div></div>
+        <div class="starrow"><span class="pill star">147.1k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">节点式生成工作流引擎，把模型、预处理器、采样、输出连成可复用的图；图像 / 视频 / 3D / 音频皆可编排，支持自定义节点与 API 化部署。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">角色立绘与三视图批量生成、线稿上色、风格迁移、给下游 3D 生成准备干净的输入图。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">17.6k forks，最新提交 2026-11-15；GPL-3.0。整个开源创作生态事实上的"中枢神经"。</span></div>
+      <div class="why"><b>推荐理由：</b>如果只深入一个 AI 项目，选它。它不只是画图工具，更是后面 AI 3D、纹理生成、插件后端的共同底座（krita-ai-diffusion 就拿它当后端）。注意仓库已迁至 <b>Comfy-Org</b> 组织，旧地址 comfyanonymous/ComfyUI 会跳转。</div>
+      <div class="tags"><span class="tag">GPL-3.0</span><span class="tag">Python</span><span class="tag">需 GPU</span><span class="tag">生态中心</span></div>
+      <div class="bar"><i style="width:100%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--paint)" data-search="Krita KDE 数字绘画 笔刷 漫画 插画 开源">
+      <div class="card-top"><div><h3><a href="https://github.com/KDE/krita" target="_blank" rel="noopener noreferrer">Krita</a></h3><div class="repo">github.com/KDE/krita</div></div>
+        <div class="starrow"><span class="pill star">10.8k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">专业级开源数字绘画软件：笔刷引擎、图层 / 蒙版、色彩管理、动画时间轴、漫画分格与透视辅助、Python 插件。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">插画、概念设计、漫画、贴图绘制；也是画角色设定稿与三视图的主力工具。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">917 forks，最新提交 2026-11-16（调研当日仍有提交）；GPL-3.0。GitHub 为镜像，主仓在 KDE Invent。</span></div>
+      <div class="why"><b>推荐理由：</b>免费里最接近"正经画画"的那个，社区教程与笔刷资源海量，且是 AI 插件的宿主。想走「立绘 → 手办」路线，它是链条第一环最稳妥的起点。</div>
+      <div class="tags"><span class="tag">GPL-3.0</span><span class="tag">C++ / Qt</span><span class="tag">桌面端</span><span class="tag">零成本入门</span></div>
+      <div class="bar"><i style="width:7%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--paint)" data-search="krita-ai-diffusion Acly 插件 局部重绘 实时绘画 ControlNet">
+      <div class="card-top"><div><h3><a href="https://github.com/Acly/krita-ai-diffusion" target="_blank" rel="noopener noreferrer">Krita AI Diffusion</a></h3><div class="repo">github.com/Acly/krita-ai-diffusion</div></div>
+        <div class="starrow"><span class="pill star">10.9k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">Krita 内的生成式 AI 插件：选区局部重绘 / 扩图、Live Painting 实时反馈、线稿与姿态控制、分区域提示词、4K/8K 放大；后端为 ComfyUI，可本地可云端。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">边画边改角色设定、快速试配色与构图、给草稿补细节，而不打断绘画手感。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">657 forks，83 个 release，最新提交 2026-10-03，v1.53.0（2026-08）。仍在跟进 Krita 6 / Qt6。</span></div>
+      <div class="why"><b>推荐理由：</b>这是"AI 辅助绘画"最舒服的形态——笔刷还是笔刷，AI 只是图层。对画师比独立 WebUI 友好得多，也天然衔接后面生成 3D 所需的干净立绘。建议 ≥6GB 显存。</div>
+      <div class="tags"><span class="tag">插件</span><span class="tag">Python</span><span class="tag">建议 6GB+ 显存</span></div>
+      <div class="bar"><i style="width:7.4%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--paint)" data-search="Aseprite 像素画 精灵 动画 sprite pixel">
+      <div class="card-top"><div><h3><a href="https://github.com/aseprite/aseprite" target="_blank" rel="noopener noreferrer">Aseprite</a></h3><div class="repo">github.com/aseprite/aseprite</div></div>
+        <div class="starrow"><span class="pill star">~40.8k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">像素画与逐帧动画编辑器：图层 / 帧分离、洋葱皮、调色板、像素完美笔刷、精灵表导出、Lua 脚本。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">像素角色、游戏精灵、低成本角色设定草稿，以及像素风周边 / 拼豆图纸。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">约 9.4k forks，2026 年持续高频发布（v1.3.18.x 系列），近 30 天仍稳定涨星。</span></div>
+      <div class="why"><b>推荐理由：</b>像素画领域无可争议的标准件，工具完成度极高。<b>但要看清许可证</b>：源码可读、可自行编译，官方二进制为商业授权（EULA），商用请购买或改用 LibreSprite / Pixelorama。</div>
+      <div class="tags"><span class="tag">EULA / 源码可见</span><span class="tag">C++</span><span class="tag">许可证需注意</span></div>
+      <div class="bar"><i style="width:28%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--paint)" data-search="OpenToonz 2D 动画 赛璐璐 吉卜力 上色 扫描">
+      <div class="card-top"><div><h3><a href="https://github.com/opentoonz/opentoonz" target="_blank" rel="noopener noreferrer">OpenToonz</a></h3><div class="repo">github.com/opentoonz/opentoonz</div></div>
+        <div class="starrow"><span class="pill star">7.8k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">完整 2D 动画制作软件：扫描线稿、自动上色、摄影表、骨骼 / 变形、特效节点、渲染输出。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">传统赛璐璐动画、角色动作稿、动态立绘；也可当作批量线稿清理工具。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">893 forks，2026-11 仍有提交，稳定低速维护；源自吉卜力使用过的 Toonz。</span></div>
+      <div class="why"><b>推荐理由：</b>免费、专业、血统正。若你的"角色"不止是静态立绘，而是想让它动起来，这是开源里少有的完整工业流程，值得为特定需求单独深入。</div>
+      <div class="tags"><span class="tag">C++</span><span class="tag">桌面端</span><span class="tag">动画流程</span></div>
+      <div class="bar"><i style="width:5.3%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--paint)" data-search="ControlNet lllyasviel 姿态 线稿 深度 可控生成 停更">
+      <div class="card-top"><div><h3><a href="https://github.com/lllyasviel/ControlNet" target="_blank" rel="noopener noreferrer">ControlNet</a></h3><div class="repo">github.com/lllyasviel/ControlNet</div></div>
+        <div class="starrow"><span class="pill star">34.1k ★</span><span class="pill cold">原仓停更</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">给扩散模型加"条件控制"：姿态骨架、线稿、Canny 边缘、深度图、法线、分割，让生成结果服从你画的结构。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">固定角色姿势、按草稿生成上色稿、生成一致的多视图 / 三视图（AI 3D 的关键前置）。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">3k forks，Apache-2.0；<b>最后推送 2024-02-25</b>，原仓库已冻结，但技术被 ComfyUI 生态与各模型作者完整继承。</span></div>
+      <div class="why"><b>推荐理由：</b>把它当"必读经典 + 概念地图"，而不是要 clone 的代码。理解它，才知道为什么三视图生成、姿势控制能成。实际使用请走 ComfyUI 的 ControlNet / Union 节点与新版权重。</div>
+      <div class="tags"><span class="tag">Apache-2.0</span><span class="tag">奠基性论文</span><span class="tag">勿直接部署</span></div>
+      <div class="bar"><i style="width:23%"></i></div>
+    </div>
+
+  </div>
+  <div class="extras">
+    <h4 aria-level="3">延伸坐标（同类可选）</h4>
+    <ul>
+      <li><a href="https://github.com/excalidraw/excalidraw" target="_blank" rel="noopener noreferrer">excalidraw/excalidraw</a> · 手绘风白板，适合画流程草图与创作构思，不是正式绘画工具。</li>
+      <li><a href="https://github.com/CMU-Perceptual-Computing-Lab/openpose" target="_blank" rel="noopener noreferrer">openpose</a>（~33.6k ★）· 姿态关键点提取，做角色姿势参考；同样已停更多年。</li>
+      <li><a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" target="_blank" rel="noopener noreferrer">AUTOMATIC1111/stable-diffusion-webui</a> 与 <a href="https://github.com/lllyasviel/Fooocus" target="_blank" rel="noopener noreferrer">Fooocus</a> · 上一代 AI 绘画界面的王者，如今节奏明显放缓，新项目更建议从 ComfyUI 起步。</li>
+      <li><a href="https://github.com/armory3d/armorpaint" target="_blank" rel="noopener noreferrer">armory3d/armorpaint</a>（~5.5k ★）· 直接在 3D 模型表面绘制 PBR 贴图，是"绘画"与"建模"之间的那道门。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 2 建模 ============ -->
+<section id="model" class="cat-model">
+  <div class="sec-head">
+    <div class="sec-mark">◈</div>
+    <div><h2>二、3D 建模</h2><p class="sub">从手雕多边形，到用一句话指挥软件</p></div>
+  </div>
+  <p class="sec-intro">这区的分野很有意思：<b>Blender 系</b>负责有机造型与艺术创作，<b>FreeCAD / OpenSCAD 系</b>负责尺寸精确的零件（手办底座、支架、连接件），<b>trimesh / assimp</b> 是不出镜但决定成败的"管道工"——格式混乱、模型漏面、打印失败，全靠它们收拾。2026 年最大变量是 <b>MCP / Agent 驱动建模</b>：不用记菜单，用自然语言指挥 Blender。</p>
+  <div class="grid">
+
+    <div class="card" style="--accent:var(--model)" data-search="Blender 3D 建模 雕刻 绑定 渲染 全套">
+      <div class="card-top"><div><h3><a href="https://github.com/blender/blender" target="_blank" rel="noopener noreferrer">Blender</a></h3><div class="repo">github.com/blender/blender</div></div>
+        <div class="starrow"><span class="pill star">~21.7k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">全流程 3D 创作套件：建模、雕刻、重拓扑、UV、材质、骨骼绑定、动画、模拟、渲染、合成、Grease Pencil 2D 绘制。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">角色造型、手办修模拆件、AI 生成网格的清理、渲染展示图；几乎每条路线的必经站。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">GitHub 为官方镜像（主开发在 projects.blender.org），2026-11 仍有更新；GPL-3.0。星数不高只是因为主仓不在 GitHub。</span></div>
+      <div class="why"><b>推荐理由：</b>不用犹豫的"大陆架"。插件生态（VRM、MMD、glTF、MCP、Hunyuan3D）全都围着它转，学会它等于同时解锁其他十个项目。注意 clone 时用 <code>GIT_LFS_SKIP_SMUDGE=1</code>。</div>
+      <div class="tags"><span class="tag">GPL-3.0</span><span class="tag">C++</span><span class="tag">必学地基</span><span class="tag">GitHub 为镜像</span></div>
+      <div class="bar"><i style="width:15%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)" data-search="mcp-for-blender blender-mcp ahujasid MCP AI 自然语言 建模 改名">
+      <div class="card-top"><div><h3><a href="https://github.com/ahujasid/mcp-for-blender" target="_blank" rel="noopener noreferrer">MCP for Blender</a></h3><div class="repo">github.com/ahujasid/mcp-for-blender</div></div>
+        <div class="starrow"><span class="pill star">34.5k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">MCP 服务端 + Blender 插件，让 LLM 直接读写场景：建物体、改材质、打光、渲染、执行 bpy 脚本、导入资产、调用图生 3D 服务。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">零基础搭场景、批量重复操作自动化、把"一句话描述"变成可继续编辑的 Blender 工程。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">3.1k forks，MIT，最新提交 2026-11-13；2025–2026 涨势最猛的 3D 类项目之一。<b>2026-09-16 由 blender-mcp 改名</b>，旧链接仍可跳转。</span></div>
+      <div class="why"><b>推荐理由：</b>代表了 2026 年最值得押注的新范式——AI 不是替你出图，而是替你操作软件。想判断"要不要投入 Agent 化创作"，从它试最省事。注意它会执行任意 Python，别在不可重建的工程上跑无人值守任务。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">Python</span><span class="tag">2026 新范式</span><span class="tag">注意改名</span></div>
+      <div class="bar"><i style="width:23.5%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)" data-search="FreeCAD 参数化 CAD 尺寸 零件 底座 3D打印">
+      <div class="card-top"><div><h3><a href="https://github.com/FreeCAD/FreeCAD" target="_blank" rel="noopener noreferrer">FreeCAD</a></h3><div class="repo">github.com/FreeCAD/FreeCAD</div></div>
+        <div class="starrow"><span class="pill star">35.4k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">参数化 3D CAD：约束草图、特征历史、工程图、Python API；基于 OpenCASCADE，含 BIM / FEM / CAM 工作台。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">手办底座、支撑桩、可动连接件、亚克力立牌、尺寸必须精确的机械件。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">2026-11-12 有更新，1.1.4 版本；LGPL-2.1。开源 CAD 里星数最高、社区最厚。</span></div>
+      <div class="why"><b>推荐理由：</b>Blender 擅长"好看"，FreeCAD 擅长"能装得上"。做实体手办时，尺寸精度决定成败，两者互补而不是二选一。</div>
+      <div class="tags"><span class="tag">LGPL-2.1</span><span class="tag">C++ / Python</span><span class="tag">工程精度</span></div>
+      <div class="bar"><i style="width:24%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)" data-search="OpenSCAD 代码 CAD 脚本 参数化 3D打印">
+      <div class="card-top"><div><h3><a href="https://github.com/openscad/openscad" target="_blank" rel="noopener noreferrer">OpenSCAD</a></h3><div class="repo">github.com/openscad/openscad</div></div>
+        <div class="starrow"><span class="pill star">10.6k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">用代码描述实体：构造实体几何（CSG）+ 2D 轮廓拉伸，改一个变量整件模型随之重算；导入导出 DXF / STL / OFF。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">批量参数化配件、可复用的底座模板、需要 Git 版本管理与自动生成的设计。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">2026-11-13 仍有提交；GPL-2.0。稳定版号偏旧但代码库持续维护。</span></div>
+      <div class="why"><b>推荐理由：</b>程序员思维做实体的最优解——模型即代码，可 diff、可复用、可批量出 100 个尺寸。和 AI 编码助手搭配尤其顺手。</div>
+      <div class="tags"><span class="tag">GPL-2.0</span><span class="tag">C++</span><span class="tag">代码化建模</span></div>
+      <div class="bar"><i style="width:7.2%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)" data-search="trimesh 网格 水密 布尔 切片 修复 Python 3D打印">
+      <div class="card-top"><div><h3><a href="https://github.com/mikedh/trimesh" target="_blank" rel="noopener noreferrer">trimesh</a></h3><div class="repo">github.com/mikedh/trimesh</div></div>
+        <div class="starrow"><span class="pill star">3.7k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">纯 Python 三角网格库：STL / OBJ / PLY / GLB / 3MF 读写，水密性检查、法线修复、布尔运算、体素化、截面切片、体积与质心计算。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">AI 生成模型的自动体检与修补、打印前检查是否漏面、批量格式转换、写自己的模型处理脚本。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">703 forks，MIT，最新推送 2026-11 上旬；PyPI 周下载量数百万，是机器人 / 3D 打印领域的隐形基础设施。</span></div>
+      <div class="why"><b>推荐理由：</b>星数不起眼，实用度极高。<b>AI 生 3D 到能打印之间最常卡住的就是"网格不水密"</b>，十几行 trimesh 代码就能自动体检并修一部分；只依赖 numpy，装上就能用。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">Python</span><span class="tag">打印前必查</span><span class="tag">轻量</span></div>
+      <div class="bar"><i style="width:2.5%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--model)" data-search="assimp 格式转换 导入导出 FBX glTF OBJ 资产管线">
+      <div class="card-top"><div><h3><a href="https://github.com/assimp/assimp" target="_blank" rel="noopener noreferrer">Assimp</a></h3><div class="repo">github.com/assimp/assimp</div></div>
+        <div class="starrow"><span class="pill star">13.3k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">Open Asset Import Library：把 40+ 种 3D 格式（FBX / glTF / OBJ / STL / Collada / 3MF…）读进统一内存结构，附带三角化、法线生成、去重等后处理；C/C++ API 与多语言绑定。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">模型资源互通、写导入器 / 查看器、把网上下载的角色模型转进自己的管线。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">3.3k forks，最新提交 2026-11-13，v6.0.5；15 年持续维护的老牌库。被无数引擎与工具间接依赖。</span></div>
+      <div class="why"><b>推荐理由：</b>角色模型圈的格式混乱是常态（PMX、FBX、VRM、GLB…）。Assimp 是那条最成熟的"万能翻译官"管道，做工具开发时省下大量解析工作。</div>
+      <div class="tags"><span class="tag">C++</span><span class="tag">库 / 非 GUI</span><span class="tag">格式互通</span></div>
+      <div class="bar"><i style="width:9%"></i></div>
+    </div>
+
+  </div>
+  <div class="extras">
+    <h4 aria-level="3">延伸坐标（按需取用）</h4>
+    <ul>
+      <li><a href="https://github.com/CadQuery/cadquery" target="_blank" rel="noopener noreferrer">CadQuery/cadquery</a>（6.1k ★）· Python 版参数化 CAD，比 OpenSCAD 更贴近现代 Python 工作流。</li>
+      <li><a href="https://github.com/cnr-isti-vclab/meshlab" target="_blank" rel="noopener noreferrer">MeshLab</a>（5.7k ★）· 网格清理、修补、简化、贴图烘焙的图形界面老将，3D 打印前处理常用。</li>
+      <li><a href="https://github.com/wjakob/instant-meshes" target="_blank" rel="noopener noreferrer">instant-meshes</a>（6.1k ★）· 自动四边面重拓扑；AI 生成的一团三角面想变成可编辑的规整网格就靠它（另有社区现代化分支 <a href="https://github.com/MondRubberduck/instant-meshes-2026" target="_blank" rel="noopener noreferrer">instant-meshes-2026</a>）。</li>
+      <li><a href="https://github.com/earthtojake/text-to-cad" target="_blank" rel="noopener noreferrer">earthtojake/text-to-cad</a>（~26k ★，2026 新项目）· 给编码 Agent 用的 CAD 技能包，代表"Agent 驱动建模"的另一条支线。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 3 AI 图生 3D ============ -->
+<section id="ai" class="cat-ai">
+  <div class="sec-head">
+    <div class="sec-mark">✦</div>
+    <div><h2>三、AI 图生 3D（传送门）</h2><p class="sub">把一张角色立绘，吹成一个可旋转的网格</p></div>
+  </div>
+  <p class="sec-intro">这是 2024–2026 变化最剧烈的星区，也是"绘画 → 手办"最短的那座桥。判断标准不再是"能不能生成"，而是三件事：<b>有没有 PBR 贴图</b>、<b>网格是否水密可打印 / 可导入引擎</b>、<b>许可证能不能商用</b>。按显存从低到高：TripoSR（约 6GB）→ Hunyuan3D-2 / TRELLIS（10–16GB）→ TRELLIS.2（24GB）。</p>
+  <div class="grid">
+
+    <div class="card" style="--accent:var(--ai)" data-search="Hunyuan3D-2 腾讯 混元 图生3D PBR 纹理 Blender 插件">
+      <div class="card-top"><div><h3><a href="https://github.com/Tencent-Hunyuan/Hunyuan3D-2" target="_blank" rel="noopener noreferrer">Hunyuan3D 2.0</a></h3><div class="repo">github.com/Tencent-Hunyuan/Hunyuan3D-2</div></div>
+        <div class="starrow"><span class="pill star">15.4k ★</span><span class="pill live">生态最厚</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">两阶段生成：Hunyuan3D-DiT 先出无纹理几何，Hunyuan3D-Paint 再合成高分辨率贴图；支持单图 / 多视图 / 文本，输出 GLB、OBJ，带本地 API 与 Blender 插件，另有 mini 版。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">把动漫角色立绘直接变成可打印手办雏形、道具摆件快速原型；2.1 版本进一步产出生产级 PBR 材质。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">该方向星数最高的开源项目；另有 <a href="https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1" target="_blank" rel="noopener noreferrer">Hunyuan3D-2.1</a>（~4.4k ★）与 Windows 整合包。ComfyUI / Blender 生态适配最全。</span></div>
+      <div class="why"><b>推荐理由：</b>中文资料最多、周边最全、上手路径最短，适合作为"第一次把立绘变 3D"的入口。<b>但许可证是社区许可（排除 EU/UK/韩国，超 100 万 MAU 需另申请）</b>，商用务必先读 LICENSE。全流水线约需 10–29GB 显存。</div>
+      <div class="tags"><span class="tag">社区许可 · 有地域限制</span><span class="tag">PBR 贴图</span><span class="tag">GLB / OBJ</span><span class="tag">10GB+ 显存</span></div>
+      <div class="bar"><i style="width:10.5%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)" data-search="TRELLIS TRELLIS.2 微软 SLAT 高斯 辐射场 网格 MIT PBR">
+      <div class="card-top"><div><h3><a href="https://github.com/microsoft/TRELLIS" target="_blank" rel="noopener noreferrer">TRELLIS / TRELLIS.2</a></h3><div class="repo">github.com/microsoft/TRELLIS · /TRELLIS.2</div></div>
+        <div class="starrow"><span class="pill star">14.3k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">初代用结构化潜变量 SLAT，一份结果可解码成 Mesh / 3D Gaussian / Radiance Field，支持文本与图像输入、局部编辑与变体生成；TRELLIS.2（4B，O-Voxel）主打任意拓扑与含透明度的完整 PBR。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">游戏资产（Mesh）、网页实时展示（Gaussian）、高保真带材质手办原型；同一原型多格式复用。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">TRELLIS 14.3k ★（CVPR'25 Spotlight），TRELLIS.2 约 12.9k ★（2025-12 发布，9 个月破万），2026 年仍在更新。</span></div>
+      <div class="why"><b>推荐理由：</b><b>许可证最干净（MIT）、细节上限最高</b>，是想认真做资产或商用的首选。代价是门槛：初代约 16GB 显存 / Linux，TRELLIS.2 需 24GB，且 2 代仅支持单图输入、 texte-to-3D 与 Gaussian 输出仍留在初代。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">CVPR'25</span><span class="tag">多格式输出</span><span class="tag">16–24GB 显存</span></div>
+      <div class="bar"><i style="width:9.7%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)" data-search="TripoSR VAST 极速 轻量 6GB MIT 单图重建 二次开发">
+      <div class="card-top"><div><h3><a href="https://github.com/VAST-AI-Research/TripoSR" target="_blank" rel="noopener noreferrer">TripoSR</a></h3><div class="repo">github.com/VAST-AI-Research/TripoSR</div></div>
+        <div class="starrow"><span class="pill star">6.9k ★</span><span class="pill slow">维护平缓</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">前馈式单图 3D 重建：Transformer 大重建模型直接从图像特征预测 triplane NeRF 并抽网格，官方数据 A100 上不到 0.5 秒。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">快速验证创意、批量草稿、作为自己工具的基座模型；低配显卡也能跑。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">MIT，约 6GB 显存且可 CPU 回退；仓库本身更新不频繁，但被大量下游项目当作底层依赖。</span></div>
+      <div class="why"><b>推荐理由：</b>论质量它已经不是 SOTA，但论"跑得起来"它无敌：纯 MIT、无附加条款、消费级显卡可用。想先花一小时验证"图生 3D 到底能不能用"，从它开始最不容易劝退；想做二次开发也最省心。</div>
+      <div class="tags"><span class="tag">MIT · 无附加条款</span><span class="tag">~6GB 显存</span><span class="tag">&lt;0.5s</span><span class="tag">仅顶点色</span></div>
+      <div class="bar"><i style="width:4.7%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)" data-search="InstantMesh TencentARC 单图 网格 FlexiCubes Apache 停更">
+      <div class="card-top"><div><h3><a href="https://github.com/TencentARC/InstantMesh" target="_blank" rel="noopener noreferrer">InstantMesh</a></h3><div class="repo">github.com/TencentARC/InstantMesh</div></div>
+        <div class="starrow"><span class="pill star">~4.6k ★</span><span class="pill slow">已放缓</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">多视图扩散 + 稀疏视图大重建模型，用 FlexiCubes 替代 marching cubes，得到面分布更规整的可编辑网格；单图输入。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">学习"多视图 → 网格"的经典架构；需要相对规整拓扑的原型。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">508 forks，Apache-2.0；主要提交集中在 2024 年，近两年维护缓慢，星数仍缓慢增长。</span></div>
+      <div class="why"><b>推荐理由：</b>架构干净、许可证宽松（Apache-2.0），至今是最容易读懂的单图生网格教学样本。但<b>别把它当 2026 的生产工具</b>——这是"星数高 ≠ 还活着"的典型案例，实用请优先 Hunyuan3D / TRELLIS。</div>
+      <div class="tags"><span class="tag">Apache-2.0</span><span class="tag">教学价值高</span><span class="tag">维护缓慢</span></div>
+      <div class="bar"><i style="width:3.1%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)" data-search="Unique3D AiuniAI 清华 30秒 单图 带纹理 NeurIPS">
+      <div class="card-top"><div><h3><a href="https://github.com/AiuniAI/Unique3D" target="_blank" rel="noopener noreferrer">Unique3D</a></h3><div class="repo">github.com/AiuniAI/Unique3D</div></div>
+        <div class="starrow"><span class="pill star">3.6k ★</span><span class="pill slow">维护平缓</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">单图约 30 秒产出带纹理网格：多视图扩散生成一致视角 → 多级上采样提纹理 → ISOMER 即时网格重建。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">桌面摆件照片快速数字化、卡通 / 写实小物件的快速原型。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">NeurIPS 2024，约 3.6k ★；最后集中更新在 2025 年，家用显卡相对友好。</span></div>
+      <div class="why"><b>推荐理由：</b>速度与质量的折中点，对显存不宽裕、又想要贴图的人很实用。适合作为"第二台发动机"对比体验，不建议作为长期主栈。</div>
+      <div class="tags"><span class="tag">NeurIPS'24</span><span class="tag">约 30s</span><span class="tag">带纹理</span></div>
+      <div class="bar"><i style="width:2.4%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--ai)" data-search="显存 硬件 选型 对比 VRAM GLB 水密 选择建议">
+      <div class="card-top"><div><h3>选型速查 · 三台发动机</h3><div class="repo">按你的显卡与用途对号入座</div></div>
+        <div class="starrow"><span class="pill">对照表</span></div></div>
+      <div class="row"><span class="k">6GB</span><span class="v"><b>TripoSR</b> — 最快、纯 MIT、只有顶点色；适合验证想法与二次开发。</span></div>
+      <div class="row"><span class="k">10–16GB</span><span class="v"><b>Hunyuan3D-2 / TRELLIS</b> — 前者生态与中文资料最好、输出 PBR；后者 MIT、可输出多种 3D 表示。</span></div>
+      <div class="row"><span class="k">24GB+</span><span class="v"><b>TRELLIS.2</b> — 细节与 PBR（含透明度）上限最高，MIT，但 Linux + 单图输入。</span></div>
+      <div class="row"><span class="k">共性</span><span class="v">生成结果几乎都要进 Blender / trimesh 做水密检查与修模，才适合打印或进引擎。</span></div>
+      <div class="why"><b>一句判断：</b>想"先看到成果"用 TripoSR，想"做成能用的资产"用 TRELLIS 或 Hunyuan3D-2，想"发论文 / 拼上限"再上 TRELLIS.2。</div>
+      <div class="tags"><span class="tag">GLB 最通用</span><span class="tag">商用先看 License</span><span class="tag">务必查水密</span></div>
+      <div class="bar"><i style="width:60%"></i></div>
+    </div>
+
+  </div>
+  <div class="extras">
+    <h4 aria-level="3">延伸坐标</h4>
+    <ul>
+      <li><a href="https://github.com/openai/shap-e" target="_blank" rel="noopener noreferrer">openai/shap-e</a>（~12k ★）· 3D 生成的基础范式教学仓，细节偏弱，适合读原理而非出成品。</li>
+      <li><a href="https://github.com/SUDO-AI-3D/zero123plus" target="_blank" rel="noopener noreferrer">SUDO-AI-3D/zero123plus</a> · 单图生成一致多视图，是很多图生 3D 链路的上游模块——做角色三视图时特别有用。</li>
+      <li><a href="https://github.com/threestudio-project/threestudio" target="_blank" rel="noopener noreferrer">threestudio</a> / <a href="https://github.com/graphdeco-inria/gaussian-splatting" target="_blank" rel="noopener noreferrer">gaussian-splatting</a> · 偏研究与 3D 重建，适合想深入算法的人。</li>
+      <li><a href="https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1" target="_blank" rel="noopener noreferrer">Hunyuan3D-2.1</a>（~4.4k ★）· 主打生产级 PBR 材质，是 2.0 的画质升级支线。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 4 手办 / 角色 ============ -->
+<section id="figure" class="cat-figure">
+  <div class="sec-head">
+    <div class="sec-mark">✧</div>
+    <div><h2>四、手办 / 角色模型</h2><p class="sub">从虚拟形象，到握在手里的实体</p></div>
+  </div>
+  <p class="sec-intro">这一区是"角色"真正落地的地方，分成两条支线：<b>数字角色</b>（MakeHuman 造人体 → VRM 标准 → 网页展示）与 <b>实体手办</b>（切片 → 光固化修复 → 打印）。中间还需要格式转换与重拓扑。星数普遍不高，但每一个都卡在流水线的关键节点上，属于"小而不可替代"。</p>
+  <div class="grid">
+
+    <div class="card" style="--accent:var(--figure)" data-search="MakeHuman 参数化 人体 角色 基础网格 骨骼">
+      <div class="card-top"><div><h3><a href="https://github.com/makehumancommunity/makehuman" target="_blank" rel="noopener noreferrer">MakeHuman</a></h3><div class="repo">github.com/makehumancommunity/makehuman</div></div>
+        <div class="starrow"><span class="pill star">~1.6k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">用滑杆生成参数化 3D 人体：体型、五官、年龄、性别、姿态可调，输出带骨骼的基础网格；Python + 插件体系，配套社区资产库。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">角色建模起点、人体比例参考、快速做可继续雕刻的 base mesh，避免从球体开始拉人。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">296 forks；近 30 天 +73 星，2026-11 仍在 trending 榜上，属于"老项目回温"。</span></div>
+      <div class="why"><b>推荐理由：</b>做角色手办最费时间的就是人体基础形。它把这一步压缩成几分钟，且完全开源可改。配合 MPFB2（Blender 插件）或 VRM 插件，可以一路走到可动角色。</div>
+      <div class="tags"><span class="tag">Python</span><span class="tag">桌面端</span><span class="tag">角色起点</span><span class="tag">近期回温</span></div>
+      <div class="bar"><i style="width:1.1%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)" data-search="VRM-Addon-for-Blender saturday06 VRM 1.0 MToon 骨骼映射 导入导出">
+      <div class="card-top"><div><h3><a href="https://github.com/saturday06/VRM-Addon-for-Blender" target="_blank" rel="noopener noreferrer">VRM Add-on for Blender</a></h3><div class="repo">github.com/saturday06/VRM-Addon-for-Blender</div></div>
+        <div class="starrow"><span class="pill star">1.7k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">在 Blender 中导入 / 导出 VRM 0.x 与 1.0：Humanoid 骨骼映射（兼容 MMD / VRoid / Mixamo 命名）、MToon 材质、表情、物理、Python 自动化 API。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">把 Blender 里做好的角色变成 VRM 虚拟形象；把现成 VRM 模型导入 Blender 改造、拆件、做手办。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">170 forks，MIT，2026 年高频发版（v4.10.x，10–11 月），已跟进 Blender 5.x；维护健康度评分很高。</span></div>
+      <div class="why"><b>推荐理由：</b>它是"角色模型圈通用语 VRM"与" Blender 工作流"之间最可靠的闸门。想让数字角色既能在网页 / VTuber 里动，又能拿去打印，这个插件几乎是必装。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">Blender 插件</span><span class="tag">VRM 1.0</span><span class="tag">MToon</span></div>
+      <div class="bar"><i style="width:1.2%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)" data-search="three-vrm pixiv Three.js Web 网页 VRM 展示 MToon">
+      <div class="card-top"><div><h3><a href="https://github.com/pixiv/three-vrm" target="_blank" rel="noopener noreferrer">three-vrm</a></h3><div class="repo">github.com/pixiv/three-vrm</div></div>
+        <div class="starrow"><span class="pill star">2.3k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">Three.js 的 VRM 加载与渲染库：VRM 1.0 人形骨骼、表情 / 视线、MToon 卡通材质、SpringBone，兼容 WebGL 与 WebGPU。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">网页 3D 角色展示页、作品集、在线模型预览器、轻量 VTuber 应用。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">200 forks，MIT，2026-10 仍有更新，近 30 天 +63 星；由 pixiv 官方维护。</span></div>
+      <div class="why"><b>推荐理由：</b>做完了角色，总得让人看见。它是把 .vrm 放进浏览器最省事、最正统的方式，配 <a href="https://github.com/google/model-viewer" target="_blank" rel="noopener noreferrer">model-viewer</a>（看 GLB）基本能覆盖所有展示需求。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">TypeScript</span><span class="tag">Web 展示</span></div>
+      <div class="bar"><i style="width:1.6%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)" data-search="CharacterStudio M3-org 网页 VRM 换装 捏人 角色工作室">
+      <div class="card-top"><div><h3><a href="https://github.com/M3-org/CharacterStudio" target="_blank" rel="noopener noreferrer">CharacterStudio</a></h3><div class="repo">github.com/M3-org/CharacterStudio</div></div>
+        <div class="starrow"><span class="pill star">375 ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">浏览器里的 VRM / glTF 角色工作室：点选式换装、拖入本地模型与贴图、调色、一键优化（合并蒙皮网格 / 图集合并）、批量导出 GLB / VRM。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">不装 Blender 也能快速拼角色、做变体、给游戏 / 直播准备轻量化 avatar。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">MIT，2026 年持续维护（含依赖安全更新），星数小但方向独特、提交频繁。</span></div>
+      <div class="why"><b>推荐理由：</b>星数最低但最"好玩"的一个——它把捏人变成网页上的搭积木。如果你想先低成本体验"角色组装"再决定要不要啃 Blender，这是最轻的入口。</div>
+      <div class="tags"><span class="tag">MIT</span><span class="tag">Web / React</span><span class="tag">低门槛</span></div>
+      <div class="bar"><i style="width:0.6%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)" data-search="OrcaSlicer 切片 FDM 3D打印 手办 支撑 AGPL">
+      <div class="card-top"><div><h3><a href="https://github.com/OrcaSlicer/OrcaSlicer" target="_blank" rel="noopener noreferrer">OrcaSlicer</a></h3><div class="repo">github.com/OrcaSlicer/OrcaSlicer</div></div>
+        <div class="starrow"><span class="pill star">~16.2k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">FDM 切片软件：内置校准测试、逐特征参数、树状 / 有机支撑、多材料与多机型配置（Bambu / Prusa / Voron / Creality 等）。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">FDM 打印手办原型、大件分件、底座与支架；打印前的支撑与摆放策略。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">约 2.1k forks，AGPL-3.0，v2.4.2（2026-07），2026-10 仍有提交；近四年星数反超 PrusaSlicer，成为切片区人气第一。</span></div>
+      <div class="why"><b>推荐理由：</b>功能迭代最快、机型覆盖最广的开源切片器，手办打印的"最后一公里"。注意仓库已从 SoftFever 个人账号迁到 <b>OrcaSlicer 组织</b>；若只求稳定，PrusaSlicer（~9.4k ★）更保守，Cura（~7.1k ★）机型最杂食。</div>
+      <div class="tags"><span class="tag">AGPL-3.0</span><span class="tag">C++</span><span class="tag">FDM</span><span class="tag">注意组织迁移</span></div>
+      <div class="bar"><i style="width:11%"></i></div>
+    </div>
+
+    <div class="card" style="--accent:var(--figure)" data-search="UVtools sn4k3 光固化 树脂 岛屿 吸盘 修复 切片文件 MSLA">
+      <div class="card-top"><div><h3><a href="https://github.com/sn4k3/UVtools" target="_blank" rel="noopener noreferrer">UVtools</a></h3><div class="repo">github.com/sn4k3/UVtools</div></div>
+        <div class="starrow"><span class="pill star">~1.6k ★</span><span class="pill live">活跃</span></div></div>
+      <div class="row"><span class="k">功能</span><span class="v">直接打开并编辑<b>已切片</b>的光固化文件（.ctb / .goo / .photon / SL1 等）：岛屿检测、吸盘 / 空腔检测、层修复、曝光校准生成器、机型格式互转，无需重新切片。</span></div>
+      <div class="row"><span class="k">场景</span><span class="v">树脂打印精细手办前的"体检"：找出悬空孤岛、封闭空腔导致的爆裂风险，修好再打。</span></div>
+      <div class="row"><span class="k">热度</span><span class="v">145 forks，AGPL-3.0，v7.1.x（2026-10/11），项目健康度评分优秀；光固化圈少有的长期活跃工具。</span></div>
+      <div class="why"><b>推荐理由：</b>手办最吃细节，通常得用树脂机；而树脂打印最贵的不是树脂，是失败一整晚。<b>它能在打印前把"注定失败"的文件挑出来</b>，是这条路线里性价比最高的一颗小星。</div>
+      <div class="tags"><span class="tag">AGPL-3.0</span><span class="tag">C#</span><span class="tag">MSLA / DLP</span><span class="tag">失败预防</span></div>
+      <div class="bar"><i style="width:1.1%"></i></div>
+    </div>
+
+  </div>
+  <div class="extras">
+    <h4 aria-level="3">延伸坐标（角色生态的暗线）</h4>
+    <ul>
+      <li><a href="https://github.com/prusa3d/PrusaSlicer" target="_blank" rel="noopener noreferrer">PrusaSlicer</a>（~9.4k ★）· 稳定保守的 FDM 切片；<a href="https://github.com/Ultimaker/Cura" target="_blank" rel="noopener noreferrer">Cura</a>（~7.1k ★）· 机型兼容最广。</li>
+      <li><a href="https://github.com/KhronosGroup/glTF-Blender-IO" target="_blank" rel="noopener noreferrer">glTF-Blender-IO</a>（~1.7k ★）· GLB 进出 Blender 的官方通道，网页展示与引擎导入的标准格式。</li>
+      <li><a href="https://github.com/vrm-c/vrm-specification" target="_blank" rel="noopener noreferrer">vrm-c/vrm-specification</a> · VRM 格式规范本身；<a href="https://github.com/JiGuang283/VRMify" target="_blank" rel="noopener noreferrer">VRMify</a> · 把 MMD 的 PMX 模型转成 VRM（MMD 角色资源宝库的钥匙）。</li>
+      <li><a href="https://github.com/emilianavt/VSeeFace" target="_blank" rel="noopener noreferrer">VSeeFace</a> · 面捕驱动 VRM 角色，让做好的形象动起来；<a href="https://github.com/vchoutas/smplx" target="_blank" rel="noopener noreferrer">smplx</a> · 学术向参数化人体模型。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 路线 ============ -->
+<section id="routes">
+  <div class="sec-head">
+    <div class="sec-mark" style="color:var(--ai);border-color:rgba(183,148,255,.4);background:rgba(183,148,255,.09)">◇</div>
+    <div><h2>五、怎么选方向：三条走得通的航线</h2><p class="sub">别按星数选，按"你想把时间花在哪"选</p></div>
+  </div>
+  <p class="sec-intro">星数只说明"有多少人路过"，不说明"这条路适不适合你"。下面三条路线分别对应三种人：想画得更快的人、想让角色站起来的人、想造工具的人。</p>
+
+  <div class="route">
+    <div class="route-head"><span class="route-num">A</span><h3>画师的数字工位</h3><span class="who">适合：插画 / 角色设定 / 想提升出图效率</span></div>
+    <div class="flow"><span class="step">Krita</span><span class="arrow">→</span><span class="step">krita-ai-diffusion</span><span class="arrow">→</span><span class="step">ComfyUI</span><span class="arrow">→</span><span class="step">ControlNet / 三视图</span></div>
+    <p><strong>投入最小，见效最快。</strong>先在 Krita 里保持手绘手感，用插件做局部重绘与配色试验，需要批量与精细控制时再下沉到 ComfyUI 编排工作流。学完这条线，你已经顺手拥有了下游 AI 3D 所需的"干净立绘 + 一致三视图"能力。进阶可读 ControlNet 理解可控生成的原理。</p>
+  </div>
+
+  <div class="route">
+    <div class="route-head"><span class="route-num">B</span><h3>一张立绘 → 一尊手办</h3><span class="who">适合：想做实体周边 / 手办原型</span></div>
+    <div class="flow"><span class="step">角色立绘 / 三视图</span><span class="arrow">→</span><span class="step">TripoSR 或 Hunyuan3D-2</span><span class="arrow">→</span><span class="step">Blender 修模拆件</span><span class="arrow">→</span><span class="step">trimesh 水密检查</span><span class="arrow">→</span><span class="step">UVtools / OrcaSlicer</span><span class="arrow">→</span><span class="step">打印</span></div>
+    <p><strong>最有成就感，也最容易踩坑。</strong>低配先用 TripoSR 验证流程，追求贴图质量换 Hunyuan3D-2 或 TRELLIS；输出 GLB 后一定进 Blender 清理拓扑、补面、拆件，再用 trimesh 查水密；树脂机走 UVtools 查岛屿与吸盘，FDM 走 OrcaSlicer 排支撑。数字角色支线则把中段换成 MakeHuman → VRM 插件 → three-vrm 网页展示。</p>
+  </div>
+
+  <div class="route">
+    <div class="route-head"><span class="route-num">C</span><h3>不画画，造工具</h3><span class="who">适合：开发者 / 想做管线与二次开发</span></div>
+    <div class="flow"><span class="step">trimesh + assimp</span><span class="arrow">→</span><span class="step">glTF / VRM 标准</span><span class="arrow">→</span><span class="step">three-vrm 前端</span><span class="arrow">→</span><span class="step">MCP for Blender</span><span class="arrow">→</span><span class="step">自己的插件 / Agent</span></div>
+    <p><strong>天花板最高，2026 年最热。</strong>用 trimesh / assimp 处理几何与格式，用 three-vrm 做展示层，再用 MCP 把 LLM 接进 Blender。今年冒出的一批高星新项目（mcp-for-blender 34.5k、text-to-cad 26k、img2threejs 21k）都在证明同一件事：<b>"给创作软件装一个 Agent 接口"正在成为新的基础设施</b>。如果你擅长写代码，这是最值得押注的方向。</p>
+  </div>
+</section>
+
+<!-- ============ 避坑 ============ -->
+<section id="pitfalls">
+  <div class="sec-head">
+    <div class="sec-mark" style="color:var(--warn);border-color:rgba(255,178,107,.4);background:rgba(255,178,107,.09)">!</div>
+    <div><h2>六、出海前的四张警示图</h2><p class="sub">星数会骗人，许可证和提交日期不会</p></div>
+  </div>
+  <div class="pit">
+    <div class="pit-item"><h4 aria-level="3">1 · 许可证不是装饰品</h4><p>Aseprite 是 EULA（源码可读，官方二进制需购买）；Hunyuan3D 用社区许可，<b>明确排除欧盟 / 英国 / 韩国</b>且有大用户条款；ComfyUI 是 GPL-3.0，OrcaSlicer / UVtools 是 AGPL-3.0（有网络服务传染性）；TRELLIS / TripoSR 是干净的 MIT。做周边售卖前，务必逐个读 LICENSE。</p></div>
+    <div class="pit-item"><h4 aria-level="3">2 · 高星 ≠ 还活着</h4><p>ControlNet 34.1k ★ 但最后推送 2024-02；InstantMesh 4.6k ★ 主要更新停在 2024；Fooocus、AUTOMATIC1111 也明显放缓。<b>看 star 之前先看 pushed_at</b>。经典仓库适合读原理，实际部署要找仍在维护的生态实现。</p></div>
+    <div class="pit-item"><h4 aria-level="3">3 · 仓库会改名、会搬家</h4><p>ComfyUI 已迁至 <b>Comfy-Org/ComfyUI</b>；blender-mcp 于 2026-09-16 更名 <b>mcp-for-blender</b>（旧链接仍跳转）；OrcaSlicer 从 SoftFever 迁到组织账号；Blender、Krita 在 GitHub 上只是<b>镜像</b>（主仓分别在 blender.org 与 KDE Invent）。收藏链接时记最新地址。</p></div>
+    <div class="pit-item"><h4 aria-level="3">4 · 显存与"最后一公里"</h4><p>图生 3D 从 6GB 到 29GB 不等，先量自己的显卡再选模型；没有本地卡可先用 Hugging Face Space 体验。另外，<b>AI 直接吐出的网格通常不能直接打印</b>：漏面、非流形、薄壁、内部空腔都得靠 Blender + trimesh + UVtools 收尾，这一步别省。</p></div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>数据来源与口径：</strong>星数、fork、最近提交日期取自 2026-11-16 前后可访问的 GitHub 仓库页面（部分为实时读取）及 2026 年 10–11 月的公开统计快照（GitHub Topics、GitTrend、buildradar、git-stars 等）。星数会持续浮动，故多数以「约 / k」量级呈现，用于横向比较而非精确审计。</p>
+  <p><strong>筛选原则：</strong>代表性（该方向绕不开）· 可用性（截至 2026-11 仍能运行）· 互补性（能串成完整链路）· 判断价值（能帮你决定要不要深入）。高星但已冻结的项目保留，并明确标注状态。</p>
+  <p>这张星图画于 2026-11-16 · 供后续深入方向做快速取舍</p>
+</footer>
+
+</div>
+<script>
+  const q = document.getElementById('q');
+  q.addEventListener('input', () => {
+    const term = q.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('.card').forEach(c => {
+      const hay = (c.dataset.search + ' ' + c.textContent).toLowerCase();
+      const hit = !term || hay.includes(term);
+      c.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    const st = document.getElementById('filter-status');
+    if (st) st.textContent = '匹配 ' + shown + ' 个项目';
+  });
+</script>
+<a href="index.html" title="返回导航首页" style="position:fixed;right:22px;bottom:22px;z-index:99;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:rgba(21,27,44,.94);border:1px solid #28324a;color:#b794ff;font-size:13px;text-decoration:none;backdrop-filter:blur(8px)" onmouseover="this.style.borderColor='#b794ff'" onmouseout="this.style.borderColor='#28324a'">&#8592; 导航首页</a>
+</body>
+</html>

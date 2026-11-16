@@ -1,0 +1,25 @@
+# Windows build artifacts - distributed via GitHub Releases, not in git
+创作工具星图.exe
+_internal/
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Tool temp files (scripts write these into %TEMP%, but keep the repo clean)
+*-config.json
+shortcut-readback.txt
+desktop.txt
+read-missing.txt
+
+# OS / editor
+Thumbs.db
+.DS_Store
+*.swp
+.idea/
+.vscode/
