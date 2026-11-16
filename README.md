@@ -27,7 +27,7 @@
 
 ### 方式二：Windows 免安装应用
 
-前往 **Releases** 下载 `创作工具星图-v1.6.0-win64.zip`，解压到任意目录，双击 `创作工具星图.exe`：
+前往 **Releases** 下载 `creative-tools-atlas-v1.6.0-win64.zip`（约 8 MB），解压到任意目录，双击 `创作工具星图.exe`：
 
 - 以 Edge / Chrome 的**应用模式窗口**打开（无地址栏、无标签栏，像独立软件而非浏览器页面）；
 - 找不到 Edge / Chrome 时自动回退系统默认浏览器，也可手动双击 `index.html`；
