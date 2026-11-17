@@ -26,6 +26,11 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 PORT = 7843
+_LOG_LOCK = threading.Lock()          # 轮20：多线程日志串行化
+_INSTALL_LOCK = threading.Lock()      # 轮20：安装去重（同一时刻只允许一个）
+_INSTALLING = set()
+# 安全白名单：只允许本机来源，防止任意网页/DNS rebinding 跨站触发 launch/install
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 HERE = Path(__file__).resolve().parent
 LOG = HERE / "tool-bridge.log"
 
@@ -58,8 +63,9 @@ def w(msg):
     line = "[%s] %s" % (time.strftime("%H:%M:%S"), msg)
     print(line, flush=True)
     try:
-        with LOG.open("a", encoding="utf-8") as f:
-            f.write(line + "\n")
+        with _LOG_LOCK:
+            with LOG.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
     except Exception:
         pass
 
@@ -102,7 +108,11 @@ def registry_exe(names):
                     if v and Path(v).is_dir():
                         for exe in Path(v).rglob("*.exe"):
                             low = exe.name.lower()
-                            if any(k in low for k in ("slicer","krita","freecad","cura","uvtools","blender")):
+                            # 轮13：用工具的 reg 名称/可执行名匹配，而非全局 6 词白名单
+                            if any(n.lower() in low for n in names) or any(
+                                    k in low for k in ("slicer","krita","freecad","cura",
+                                                      "uvtools","blender","openscad","meshlab",
+                                                      "opentoonz","aseprite")):
                                 return str(exe)
                 try:
                     winreg.CloseKey(sk)
@@ -130,10 +140,11 @@ def find_exe(patterns, regnames=None):
 
 
 def pip_installed(mod):
+    """真正的导入检测：必须检查 returncode，否则 import 失败也返回 True。"""
     try:
-        subprocess.run([sys.executable, "-c", "import " + mod],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=8)
-        return True
+        r = subprocess.run([sys.executable, "-c", "import " + mod],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=8)
+        return r.returncode == 0
     except Exception:
         return False
 
@@ -163,6 +174,10 @@ def launch(tid):
     if t["kind"] == "web":
         webbrowser.open(t.get("url", ""))
         return True, "已在浏览器打开 " + t["name"]
+    if t["kind"] == "cli":
+        return False, t["name"] + " 是 Python 命令行库，无 GUI 可启动；在脚本里 import 使用即可。"
+    if t["kind"] == "suite":
+        return False, t["name"] + " 需先安装框架与模型权重，请按「安装AI引擎说明.md」启动。"
     exe = find_exe(t.get("exe", []), t.get("reg")) if (t.get("exe") or t.get("reg")) else None
     if not exe:
         return False, t["name"] + " 未检测到本地安装，请先一键安装"
@@ -190,20 +205,65 @@ def install(tid):
             cmd = ["winget", "install", "--id", t["winget"], "--exact", "--silent",
                    "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"]
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-            ok = r.returncode == 0 or "already installed" in (r.stdout + r.stderr)
-            return ok, ("winget 安装完成: " + t["winget"]) if ok else ("winget 失败: " + (r.stderr or r.stdout)[-300:])
+            out = r.stdout + r.stderr
+            # 轮15：returncode 为主，兼容中英文"已安装"文案
+            already = ("already installed" in out.lower() or
+                       "已安装" in out or "已安装的版本" in out)
+            ok = r.returncode == 0 or already
+            return ok, ("winget 安装完成: " + t["winget"]) if ok else ("winget 失败: " + out[-300:])
         return False, t["name"] + " 需要手动安装（无 winget/pip 一键路径），已为你打开官方页面"
     except subprocess.TimeoutExpired:
-        return False, "安装超时（>15分钟），请手动检查"
+        # 轮15：按分支给正确超时数字（pip=10分钟 / winget=15分钟）
+        limit = "10 分钟" if (t.get("kind") == "cli") else "15 分钟"
+        return False, "安装超时（>" + limit + "），请手动检查"
     except Exception as e:
         return False, "安装异常: " + str(e)
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _origin_allowed(self):
+        """浏览器请求：仅放行 file://(null) 与本机 http(s) 预览来源。"""
+        origin = self.headers.get("Origin")
+        if not origin:
+            return True  # 非浏览器请求，靠 Host 校验
+        if origin == "null":
+            return True  # file:// 打开工坊
+        try:
+            o = urlparse(origin)
+            if o.scheme in ("http", "https") and (o.hostname or "").lower() in LOCAL_HOSTS:
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _host_allowed(self):
+        """所有请求都要过 Host 校验，挡住 DNS rebinding。"""
+        host = self.headers.get("Host", "")
+        hostname = host.split(":")[0].strip("[]").lower()
+        return hostname in LOCAL_HOSTS
+
+    def _forbidden(self):
+        return (not self._host_allowed()) or (not self._origin_allowed())
+
     def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # 不再使用通配符：只反射已验证的本机来源
+        origin = self.headers.get("Origin")
+        if origin == "null":
+            self.send_header("Access-Control-Allow-Origin", "null")
+        elif origin and self._origin_allowed():
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def _guard(self):
+        """统一入口守卫：不合法直接 403 并返回 True。"""
+        if self._forbidden():
+            w("FORBIDDEN host=%s origin=%s" % (
+                self.headers.get("Host", ""), self.headers.get("Origin", "-")))
+            self._json({"ok": False, "error": "forbidden origin/host"}, 403)
+            return True
+        return False
 
     def _json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -215,11 +275,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
+        if self._guard(): return
         self.send_response(204)
         self._cors()
         self.end_headers()
 
     def do_GET(self):
+        if self._guard(): return
         u = urlparse(self.path)
         if u.path == "/api/ping":
             return self._json({"ok": True, "service": "atlas-tool-bridge", "port": PORT})
@@ -231,6 +293,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"ok": False, "error": "not found"}, 404)
 
     def do_POST(self):
+        if self._guard(): return
         u = urlparse(self.path)
         qs = parse_qs(u.query)
         tid = (qs.get("id") or [""])[0]
@@ -239,7 +302,16 @@ class Handler(BaseHTTPRequestHandler):
             w("LAUNCH %s -> %s (%s)" % (tid, "OK" if ok else "FAIL", msg))
             return self._json({"ok": ok, "message": msg})
         if u.path == "/api/install":
-            ok, msg = install(tid)
+            # 轮20：并发去重——同一工具正在安装时不重复拉起进程
+            with _INSTALL_LOCK:
+                if tid in _INSTALLING:
+                    return self._json({"ok": False, "message": tid + " 正在安装中，请勿重复点击"})
+                _INSTALLING.add(tid)
+            try:
+                ok, msg = install(tid)
+            finally:
+                with _INSTALL_LOCK:
+                    _INSTALLING.discard(tid)
             w("INSTALL %s -> %s (%s)" % (tid, "OK" if ok else "FAIL", msg))
             return self._json({"ok": ok, "message": msg})
         self._json({"ok": False, "error": "not found"}, 404)
@@ -250,7 +322,12 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     w("tool-bridge starting on 127.0.0.1:%d" % PORT)
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    try:
+        srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    except OSError as e:
+        w("tool-bridge FAILED to bind port %d: %s" % (PORT, e))
+        w("Maybe another instance is running; use start-tool-bridge.ps1 -Stop first.")
+        sys.exit(1)
     w("tool-bridge ready.")
     try:
         srv.serve_forever()

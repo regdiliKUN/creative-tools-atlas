@@ -20,7 +20,12 @@ $checked = 0
 $failed = @()
 
 foreach ($line in $lines) {
-  # Table rows: | `file` | 1234 | `abcd1234...` |
+  # Table rows: | `file` | 1234 | `abcd...` |
+  # Round14: any table row whose size column is NOT a number is a broken/missing entry.
+  if ($line -match '^\|\s*`([^`]+)`\s*\|\s*([^|]+)\|' -and $line -notmatch '^\|\s*`([^`]+)`\s*\|\s*\d+') {
+    $failed += ($matches[1] + " (bad size column)")
+    continue
+  }
   if ($line -match '^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|\s*`([0-9a-fA-F]+)') {
     $rel = $matches[1]
     $expectSize = [int]$matches[2]

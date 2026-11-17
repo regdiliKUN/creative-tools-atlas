@@ -11,6 +11,7 @@
 找不到时明确报错，绝不静默在错误位置生成清单。
 """
 import hashlib
+from datetime import date
 import os
 import sys
 from pathlib import Path
@@ -55,6 +56,7 @@ FILES = [
     "迭代记录/迭代记录-v4.md",
     "迭代记录/迭代记录-v5.md",
     "迭代记录/迭代记录-v6.md",
+    "迭代记录/迭代记录-v7.md",
     "快捷方式工具/shortcut.ps1",
     "快捷方式工具/resolve-desktop.ps1",
     "快捷方式工具/rebuild-shortcut.ps1",
@@ -79,17 +81,23 @@ def main():
     lines = [
         "# 创作工具星图 · 文件清单与校验基线",
         "",
-        "版本：v1.6.2　生成日期：2026-11-17",
+        "版本：v1.7.0　生成日期：" + date.today().isoformat(),
         "",
         "| 文件 | 字节 | SHA-256（前16位） |",
         "|---|---:|---|",
     ]
+    missing = []
     for rel in FILES:
         p = BASE / rel
         if p.is_file():
             lines.append(f"| `{rel}` | {p.stat().st_size} | `{sha256(p)}…` |")
         else:
-            lines.append(f"| `{rel}` | — | 缺失 |")
+            missing.append(rel)
+    if missing:
+        print("ERROR: missing files, refuse to generate manifest:", file=sys.stderr)
+        for m in missing:
+            print("  " + m, file=sys.stderr)
+        sys.exit(1)
     lines += [
         "",
         "> `_internal/` 为运行依赖目录，勿单独移动或删除。",

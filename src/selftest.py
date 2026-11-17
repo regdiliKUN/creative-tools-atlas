@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.6.2)
+"""创作工具星图 · 自动化质量自检套件 (v1.7.0)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.6.2"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v1.7.0"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -110,6 +110,11 @@ def check_version_consistency():
         "首页": (re.search(r"(v\d+\.\d+\.\d+)", read("index.html")) or [None, ""])[1],
         "工坊": (re.search(r"(v\d+\.\d+\.\d+)", read("studio.html")) or [None, ""])[1],
     }
+    # 轮16：README 纳入版本检查（构建目录内的仓库 README）
+    readme = Path(__file__).resolve().parent.parent / "creative-tools-atlas" / "README.md"
+    if readme.is_file():
+        rm = re.search(r"v(\d+\.\d+\.\d+)\s+起带", readme.read_text(encoding="utf-8"))
+        sources["README"] = ("v" + rm.group(1)) if rm else ""
     changelog = read("CHANGELOG.md")
     first = re.search(r"^##\s+(v\d+\.\d+\.\d+)", changelog, re.M)
     sources["CHANGELOG首条"] = first.group(1) if first else ""
@@ -129,11 +134,11 @@ def check_manifest_integrity():
 
     # 包内顶层交付文档必须都在清单之外被覆盖（MANIFEST 自身除外）
     # 递归扫描（迭代记录已收进 迭代记录/ 子目录）
+    # 全量扫描交付物（含 .ps1/.py），只有 _internal 与运行日志排除
     deliverables = [str(p.relative_to(BASE)).replace("\\", "/")
                     for p in BASE.rglob("*")
-                    if p.is_file() and p.suffix in (".html", ".md", ".txt", ".exe", ".ico", ".png")
-                    and p.name != "MANIFEST.md" and "_internal" not in p.parts
-                    and p.name not in ("tool-bridge.log",)]
+                    if p.is_file() and p.name != "MANIFEST.md" and "_internal" not in p.parts
+                    and p.name not in ("tool-bridge.log",) and "__pycache__" not in p.parts]
     uncovered = [d for d in deliverables if d not in entries]
     check("清单/无遗漏", not uncovered,
           f"交付文件 {len(deliverables)} 个" if not uncovered else "漏:" + ",".join(uncovered))
@@ -193,6 +198,30 @@ def check_diagnostic_tool():
     check("工具/诊断器", ok, detail)
 
 
+def check_ps_braces():
+    """轮16：PS 脚本大括号平衡的静态近似检查（抓轮14 那种孤立 } 语法错）。"""
+    tools = BASE / "快捷方式工具"
+    scripts = sorted(tools.glob("*.ps1")) if tools.is_dir() else []
+    if not scripts:
+        check("脚本/PS语法静态", False, "未找到任何 .ps1（目录缺失？）")
+        return
+    bad = []
+    for p in scripts:
+        depth = 0
+        orphan = False
+        for ln in p.read_text(encoding="utf-8").splitlines():
+            code = ln.split("#", 1)[0]
+            opens = code.count("{"); closes = code.count("}")
+            if closes > opens and depth == 0:
+                orphan = True
+            depth += opens - closes
+            if depth < 0: orphan = True
+        if depth != 0 or orphan:
+            bad.append(p.name + "(depth=%d%s)" % (depth, ",orphan" if orphan else ""))
+    check("脚本/PS语法静态", not bad,
+          "%d 脚本括号平衡" % len(scripts) if not bad else "异常:" + ",".join(bad))
+
+
 def check_studio():
     """创作工坊：工具覆盖、生成器、产出能力、输入转义、首页导航。"""
     if not (BASE / "studio.html").is_file():
@@ -240,6 +269,7 @@ def main():
     check_iteration_archives()
     check_diagnostic_tool()
     check_studio()
+    check_ps_braces()
 
     passed = sum(1 for _, ok, _ in _results if ok)
     total = len(_results)

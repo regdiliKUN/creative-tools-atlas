@@ -1,13 +1,13 @@
 # 创作工具星图 · Creative Tools Atlas
 
 > 一份离线可读的 GitHub 创作工具调研星图、一条实操航线，以及一个能真正调用本机软件的内容工坊。
-> v1.6.1 起带**本地工具桥**：工坊里的工具不再是冷冰冰的 GitHub 链接，而是「已装→点击启动 / 未装→一键安装」。
+> v1.7.0 起带**本地工具桥**：工坊里的工具不再是冷冰冰的 GitHub 链接，而是「已装→点击启动 / 未装→一键安装」。
 
 <p align="left">
   <strong>内容本地可读 · 工具点击即调用 · 效果优先排序 · 任务包直接流入执行台</strong>
 </p>
 
-## v1.6.1 新特性：本地工具链
+## v1.7.0 新特性：本地工具链与工作流支线
 
 - **真装了 10 个桌面软件**（Krita / Blender / FreeCAD / OpenSCAD / MeshLab / OpenToonz / Cura / PrusaSlicer / OrcaSlicer / UVtools），winget 静默安装，100% 可被探测。
 - **本地工具桥** `tools/tool-bridge.py`：只监听 `127.0.0.1:7843` 的零依赖 HTTP 服务。工坊页通过它启动/安装工具。用法：
@@ -45,7 +45,7 @@
 
 ### 方式二：Windows 免安装应用
 
-前往 **Releases** 下载 `creative-tools-atlas-v1.6.0-win64.zip`（约 8 MB），解压到任意目录，双击 `创作工具星图.exe`：
+前往 **Releases** 下载 `creative-tools-atlas-v1.7.0-win64.zip`（约 8 MB），解压到任意目录，双击 `创作工具星图.exe`：
 
 - 以 Edge / Chrome 的**应用模式窗口**打开（无地址栏、无标签栏，像独立软件而非浏览器页面）；
 - 找不到 Edge / Chrome 时自动回退系统默认浏览器，也可手动双击 `index.html`；
@@ -97,13 +97,17 @@ creative-tools-atlas/
 ├── src/                                构建期源码（Python）
 │   ├── launcher.py                     Windows 启动器（应用窗口 + 回退链）
 │   ├── build_manifest.py               生成 SHA-256 校验清单
-│   └── selftest.py                     自动化质量自检套件（17 条断言）
+│   └── selftest.py                     自动化质量自检套件（22 条断言）
 ├── tools/                              PowerShell 工具（纯 ASCII）
 │   ├── shortcut.ps1                    快捷方式创建 / 回读
 │   ├── resolve-desktop.ps1             解析真实桌面路径
 │   ├── rebuild-shortcut.ps1            一键重建快捷方式
 │   ├── verify-package.ps1              按清单校验文件完整性
-│   └── diagnose.ps1                    用户侧一键故障诊断
+│   ├── diagnose.ps1                    用户侧一键故障诊断
+│   ├── tool-bridge.py                  本地工具桥（127.0.0.1:7843，零依赖 HTTP 服务）
+│   ├── start-tool-bridge.ps1           一键启动工具桥
+│   ├── install-comfyui.ps1             AI 引擎安装脚本（默认不下载权重）
+│   └── 安装AI引擎说明.md               AI 模型体积与下载指引（UTF-8 中文）
 ├── docs/                               使用说明、变更日志、校验基线、六轮迭代记录
 └── assets/                             应用图标
 ```
@@ -151,7 +155,7 @@ python src/build_manifest.py
 - [第四轮](docs/迭代记录/迭代记录-v4.md) · [第五轮](docs/迭代记录/迭代记录-v5.md) · [第六轮](docs/迭代记录/迭代记录-v6.md)
 - [变更日志](docs/CHANGELOG.md) · [使用说明](docs/使用说明.txt)
 
-演进主线：v1.0 裸 HTML → v1.1 软件包化 → v1.2 应用窗口与哈希校验 → v1.3 锁 bug 与外链安全 → v1.4 多用户锁隔离与语义化 → v1.5 校验器动态化 → v1.6 自动化质量保障体系 + 创作工坊 → v1.6.1 本地工具链（点击即调用）→ v1.6.2 工作流支线化（选需求进专属支线）。
+演进主线：v1.0 裸 HTML → v1.1 软件包化 → v1.2 应用窗口与哈希校验 → v1.3 锁 bug 与外链安全 → v1.4 多用户锁隔离与语义化 → v1.5 校验器动态化 → v1.6 自动化质量保障体系 + 创作工坊 → v1.6.1 本地工具链（点击即调用）→ v1.6.2 工作流支线化（选需求进专属支线）→ v1.7.0 二十轮质量迭代（正确性/安全/边界/一致性全面加固）。
 
 ## 说明
 

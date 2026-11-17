@@ -30,7 +30,15 @@ if ($Status) {
 if ($Stop) {
   $conns = Get-NetTCPConnection -LocalPort 7843 -State Listen -ErrorAction SilentlyContinue
   foreach ($c in $conns) {
-    Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
+    $proc = Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue
+    if ($proc) {
+      $cl = (Get-CimInstance Win32_Process -Filter ("ProcessId=" + $proc.Id) -ErrorAction SilentlyContinue).CommandLine
+      if ($proc.ProcessName -match 'python' -and $cl -match 'tool-bridge\.py') {
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+      } else {
+        Write-Output ('SKIP foreign process on port 7843: ' + $proc.ProcessName)
+      }
+    }
   }
   Start-Sleep -Milliseconds 500
   Write-Output ('BRIDGE_STOPPED=' + (-not (Test-Bridge)))
@@ -43,8 +51,7 @@ if (Test-Bridge) {
 }
 
 # Start hidden, detached from this console.
-$code = 'Start-Process -FilePath "' + $py + '" -ArgumentList "' + $script + '" -WindowStyle Hidden'
-Invoke-Expression $code
+Start-Process -FilePath $py -ArgumentList ('"' + $script + '"') -WindowStyle Hidden
 Start-Sleep -Seconds 2
 
 if (Test-Bridge) {
