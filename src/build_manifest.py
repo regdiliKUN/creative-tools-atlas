@@ -11,6 +11,7 @@
 找不到时明确报错，绝不静默在错误位置生成清单。
 """
 import hashlib
+import re
 from datetime import date
 import os
 import sys
@@ -59,6 +60,7 @@ FILES = [
     "迭代记录/迭代记录-v7.md",
     "迭代记录/迭代记录-v8.md",
     "迭代记录/迭代记录-v9.md",
+    "迭代记录/迭代记录-v10.md",
     "快捷方式工具/shortcut.ps1",
     "快捷方式工具/resolve-desktop.ps1",
     "快捷方式工具/rebuild-shortcut.ps1",
@@ -79,11 +81,25 @@ def sha256(p):
     return h.hexdigest()[:16]
 
 
+def current_version():
+    """轮19：版本号单一事实来源——从 CHANGELOG 首条解析，不再在脚本里硬编码。
+    解析失败即报错退出，避免静默沿用旧版本导致清单与包不一致。"""
+    cl = BASE / "CHANGELOG.md"
+    if not cl.is_file():
+        print("ERROR: CHANGELOG.md missing; cannot determine version.", file=sys.stderr)
+        sys.exit(1)
+    m = re.search(r"^##\s+(v\d+\.\d+\.\d+)", cl.read_text(encoding="utf-8"), re.M)
+    if not m:
+        print("ERROR: no version heading in CHANGELOG.md; refuse to guess.", file=sys.stderr)
+        sys.exit(1)
+    return m.group(1)
+
+
 def main():
     lines = [
         "# 创作工具星图 · 文件清单与校验基线",
         "",
-        "版本：v1.9.0　生成日期：" + date.today().isoformat(),
+        "版本：" + current_version() + "　生成日期：" + date.today().isoformat(),
         "",
         "| 文件 | 字节 | SHA-256（前16位） |",
         "|---|---:|---|",

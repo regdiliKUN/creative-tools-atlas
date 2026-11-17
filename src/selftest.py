@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.9.0)
+"""创作工具星图 · 自动化质量自检套件 (v2.0.0)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.9.0"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v2.0.0"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -263,6 +263,146 @@ def check_studio():
     check("导航/工坊入口", 'href="studio.html"' in home, "首页已接入" if 'href="studio.html"' in home else "首页无入口")
 
 
+def check_data_contracts():
+    """轮5：把第十轮发现的四类"数据表互相矛盾"固化为可执行契约，防止改数据时再次漂移。
+
+    WORKFLOWS / GROUPS / QUALITY / RISK / POS / NEG / T2B / tool-bridge.TOOLS
+    之间必须互相引用得上、语义不串台。
+    """
+    s = read("studio.html")
+    if not s:
+        check("数据/契约", False, "studio.html 不可读")
+        return
+    # 工具条目与真实 lic / tier
+    entries = re.findall(r'\{n:"([^"]+)",\s*u:"([^"]+)",\s*s:"([^"]*)",\s*lic:"([^"]*)"', s)
+    names = [e[0] for e in entries]
+    lics = {e[3] for e in entries}
+    problems = []
+
+    # 契约 1：RISK 的每个键都必须能命中一个真实 lic（原 "community" 永不命中）
+    rb = re.search(r"const RISK = \{([\s\S]*?)\n\};", s)
+    risk_keys = re.findall(r'"([^"]+)":', rb.group(1)) if rb else []
+    dead = [k for k in risk_keys if k not in lics]
+    if dead: problems.append("RISK失效键:" + ",".join(dead))
+    if "社区许可" not in risk_keys: problems.append("RISK缺社区许可")
+
+    # 契约 2：QUALITY 必须覆盖全部工具，且不得有幽灵键
+    qb = re.search(r"const QUALITY = \{([\s\S]*?)\n\};", s)
+    q_keys = re.findall(r'"([^"]+)":', qb.group(1)) if qb else []
+    miss_q = [n for n in names if n not in q_keys]
+    ghost_q = [k for k in q_keys if k not in names]
+    if miss_q: problems.append("QUALITY缺:" + ",".join(miss_q))
+    if ghost_q: problems.append("QUALITY幽灵:" + ",".join(ghost_q))
+
+    # 契约 3：支线 stages 引用的工具名必须真实；交付/精修阶段不得出现白板工具
+    stages = re.findall(r'title: "([^"]+)",[\s\S]*?tools: \[([^\]]*)\]', s)
+    orphan = sorted({n for _, arr in stages for n in re.findall(r'"([^"]+)"', arr) if n not in names})
+    if orphan: problems.append("支线孤立工具:" + ",".join(orphan))
+    sem = [t for t, arr in stages if re.search(r"交付|精修|修模", t) and "excalidraw" in arr]
+    if sem: problems.append("交付阶段白板串台:" + ",".join(sem))
+
+    # 契约 4：promptKind ↔ POS/NEG 双向覆盖，且 9 条工作流应有 9 套模板（不复用）
+    kinds = set(re.findall(r'promptKind: "([^"]+)"', s))
+    pb = re.search(r"const POS = \{([\s\S]*?)\n  \};", s)
+    nb = re.search(r"const NEG = \{([\s\S]*?)\n  \};", s)
+    pos_keys = set(re.findall(r"^\s{4}(\w+):\s*`", pb.group(1), re.M)) if pb else set()
+    neg_keys = set(re.findall(r"^\s{4}(\w+):\s*`", nb.group(1), re.M)) if nb else set()
+    if kinds - pos_keys: problems.append("POS缺:" + ",".join(sorted(kinds - pos_keys)))
+    if kinds - neg_keys: problems.append("NEG缺:" + ",".join(sorted(kinds - neg_keys)))
+    if len(kinds) < 9: problems.append("提示词模板复用(%d<9)" % len(kinds))
+
+    # 契约 5：T2B ↔ 桥端 TOOLS 双向映射（前端点了按钮，桥里必须有对应实现）
+    tb = re.search(r"const T2B=\{([\s\S]*?)\n\};", s)
+    t2b = re.findall(r"'([^']+)':'([^']+)'", tb.group(1)) if tb else []
+    bridge_src = read("快捷方式工具/tool-bridge.py")
+    bridge_ids = set(re.findall(r'^\s{4}"([a-z0-9]+)":\s*\{"name":', bridge_src, re.M))
+    dangling = [i for _, i in t2b if i not in bridge_ids]
+    unmapped = [i for i in bridge_ids if i not in {v for _, v in t2b}]
+    bad_front = [n for n, _ in t2b if n not in names]
+    if dangling: problems.append("T2B指向不存在的桥id:" + ",".join(dangling))
+    if unmapped: problems.append("桥id未被前端映射:" + ",".join(sorted(unmapped)))
+    if bad_front: problems.append("T2B前端名不在GROUPS:" + ",".join(bad_front))
+
+    check("数据/契约", not problems,
+          ("%d 工具 / %d RISK键 / %d QUALITY / %d 模板 / %d 桥映射 全部自洽"
+           % (len(names), len(risk_keys), len(q_keys), len(pos_keys), len(t2b)))
+          if not problems else "失败:" + "; ".join(problems))
+
+
+def check_interaction_contracts():
+    """轮17：固化第十轮的交互/转义/打印契约，防止功能静默退化。"""
+    s = read("studio.html")
+    if not s:
+        check("交互/契约", False, "studio.html 不可读")
+        return
+    issues = []
+    # 1) 生成与载入的按钮启用集合必须都含 print（v1.9 生成后打印不可用）
+    gb = re.search(r'\$\("gen"\)\.addEventListener\("click",\(\)=>\{[\s\S]*?\n\}\);', s)
+    ge = re.search(r'\[([^\]]+)\]\.forEach\(id=>\$\(id\)\.disabled=false\)', gb.group(0)) if gb else None
+    if not ge or "print" not in ge.group(1): issues.append("生成未启用print")
+    lb = s.split('querySelectorAll(".load")')
+    if len(lb) > 1:
+        load = lb[1].split('querySelectorAll(".del")')[0]
+        if "markClean" not in load: issues.append("历史载入未重置脏基准")
+        if "print" not in load: issues.append("历史载入未启用print")
+    else:
+        issues.append("找不到历史载入逻辑")
+    # 2) 三个自由文本输入都要转义（v1.9 只覆盖了 extra）
+    bp = re.search(r"function buildPackage\(p\)\{[\s\S]*?\n\}", s)
+    for fn, where in (("mdInline(p.proj)", bp), ("mdInline(p.subject)", bp)):
+        if not where or fn not in where.group(0): issues.append("未转义:" + fn)
+    if "promptSafe(p.subject)" not in s: issues.append("提示词主体未清洗")
+    # 3) 空值与损坏存储边界
+    if "s==null" not in re.search(r"function esc\([^\n]*", s).group(0): issues.append("esc空值未归一")
+    if "typeof h.text" not in s: issues.append("getHist未校验字段")
+    # 4) CSS：重复媒体查询、打印声明兑现
+    mq = re.findall(r"@media\(max-width:(\d+px)\)", s)
+    if len(mq) != len(set(mq)): issues.append("重复媒体查询")
+    pr = re.search(r"@media print\{([\s\S]*?)\n  \}", s)
+    if not pr or "sec-exec" not in pr.group(1) or ".exec" not in pr.group(1):
+        issues.append("打印未隐藏执行台")
+    # 5) 提示词模板数与工作流数一致（不再复用）
+    kinds = set(re.findall(r'promptKind: "([^"]+)"', s))
+    pb = re.search(r"const POS = \{([\s\S]*?)\n  \};", s)
+    pos = set(re.findall(r"^\s{4}(\w+):\s*`", pb.group(1), re.M)) if pb else set()
+    if len(kinds) < 9 or kinds - pos: issues.append("提示词模板未全覆盖")
+    check("交互/契约", not issues,
+          "生成/载入/转义/边界/打印/模板 六类契约齐备" if not issues else "失败:" + ",".join(issues))
+
+
+def check_bridge_contracts():
+    """轮17：固化第十轮的桥端协议契约（超大 body / 状态机 / 脱敏 / 缓存）。"""
+    p = BASE / "快捷方式工具" / "tool-bridge.py"
+    if not p.is_file():
+        check("桥端/契约", False, "tool-bridge.py 缺失")
+        return
+    s = p.read_text(encoding="utf-8")
+    issues = []
+    # 1) 超大 body：必须拒绝且关闭连接（否则 keep-alive 串包）
+    if '413' not in s or "self.close_connection = True" not in s:
+        issues.append("超大body未拒绝/未关连接")
+    if "min(n, 65536)" in s: issues.append("仍存在残留body读法")
+    # 2) install 状态机：finally 统一落终态，不留 pending
+    inst = re.search(r"^def install\(tid\):[\s\S]*?^class Handler", s, re.M)
+    it = inst.group(0) if inst else ""
+    if "finally:" not in it: issues.append("install无finally统一落盘")
+    if not re.search(r'final_state\s*=\s*\("failed"', it): issues.append("失败终态缺失")
+    # 3) 脱敏兼容正斜杠 + launch 只回文件名
+    if "[\\\\/]" not in s: issues.append("_redact不支持正斜杠")
+    if "Path(exe).name" not in s: issues.append("launch回显仍含绝对路径")
+    # 4) status 缓存 + 失效 + 前端超时
+    if "STATUS_TTL" not in s or "invalidate_status_cache" not in s:
+        issues.append("status缓存/失效缺失")
+    if "10000" not in read("studio.html"): issues.append("前端status超时未提升")
+    # 5) Python 语法可编译
+    try:
+        compile(s, str(p), "exec")
+    except SyntaxError as e:
+        issues.append("语法错误:" + str(e))
+    check("桥端/契约", not issues,
+          "body/状态机/脱敏/回显/缓存 五类契约齐备" if not issues else "失败:" + ",".join(issues))
+
+
 # ---------------------------------------------------------------- 汇总
 def main():
     if not (BASE / "index.html").is_file() or not (BASE / "MANIFEST.md").is_file():
@@ -279,6 +419,9 @@ def main():
     check_iteration_archives()
     check_diagnostic_tool()
     check_studio()
+    check_data_contracts()          # 轮5
+    check_interaction_contracts()   # 轮17
+    check_bridge_contracts()        # 轮17
     check_ps_braces()
     # 轮14：被读文件缺失 -> 结构化 FAIL，而非 traceback
     check("读取/文件齐全", not _READ_MISSING,

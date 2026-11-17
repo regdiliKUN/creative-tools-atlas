@@ -29,7 +29,7 @@ from urllib.parse import urlparse, parse_qs
 
 PORT = 7843
 SERVICE = "atlas-tool-bridge"
-VERSION = "1.9.0"
+VERSION = "2.0.0"
 _BRIDGE_TOKEN = secrets.token_urlsafe(24)   # 轮1：challenge token，仅内存，进程重启即换
 _LOG_LOCK = threading.Lock()          # 轮20：多线程日志串行化
 _INSTALL_LOCK = threading.Lock()      # 轮20：安装去重（同一时刻只允许一个）
@@ -66,11 +66,17 @@ TOOLS = {
 
 
 def _redact(msg):
-    """轮11：日志脱敏——去掉用户名与完整路径，仅保留文件名，降低本地信息泄露。"""
-    # 用户目录：C://Users//<name>... -> <userdir>...
-    msg = re.sub(r"[A-Za-z]:\\Users\\[^\\\s/]+", "<userdir>", msg)
-    # 任意 .exe 的完整路径 -> 仅保留文件名（路径可含空格，故用贪婪到最后一个反斜杠）
-    msg = re.sub(r"[A-Za-z]:\\[^\n]*?\\([^\\\n/]+\.exe)", r"\1", msg)
+    """日志脱敏——去掉用户名与完整路径，仅保留文件名，降低本地信息泄露。
+
+    轮13：v1.9 只匹配反斜杠路径；桥端 glob / Path 字符串化会产出正斜杠路径，
+    实测 "C:/Users/john/AppData/krita.exe" 完整泄露用户名与目录。统一用 [\\\\/] 兼容两种分隔符。
+    """
+    # 用户目录（正反斜杠皆可）：C:/Users/<name>/... -> <userdir>/...（保留尾分隔符，避免与文件名粘连）
+    msg = re.sub(r"[A-Za-z]:[\\/]Users[\\/][^\\\s/]+[\\/]?", "<userdir>/", msg, flags=re.I)
+    # 任意带盘符或 <userdir> 前缀的绝对路径 -> 仅保留文件名（路径可含空格）
+    msg = re.sub(r"(?:<userdir>|[A-Za-z]:)[\\/][^\n]*?[\\/]([^\\\n/]+\.exe)", r"\1", msg, flags=re.I)
+    # 兜底：纯 Unix 绝对路径里的 exe（如 /opt/tools/krita.exe）
+    msg = re.sub(r"(?<![\w>])/[^\n\s]*?/([^/\n\s]+\.exe)", r"\1", msg)
     return msg
 
 
@@ -221,8 +227,31 @@ def status_of(tid, t):
             "path": exe or "", "winget": t.get("winget", ""), "note": t.get("note", "")}
 
 
-def all_status():
-    return [status_of(tid, t) for tid, t in TOOLS.items()]
+_STATUS_CACHE = {"ts": 0.0, "data": None}
+_STATUS_LOCK = threading.Lock()
+STATUS_TTL = 30.0     # 秒；安装动作会主动失效缓存
+
+
+def invalidate_status_cache():
+    """轮15：安装/卸载后立即刷新，避免 30s 内拿到陈旧状态。"""
+    with _STATUS_LOCK:
+        _STATUS_CACHE["ts"] = 0.0
+        _STATUS_CACHE["data"] = None
+
+
+def all_status(force=False):
+    """轮15：状态检测要 spawn 4 个子进程（每个最多 8s）+ 遍历注册表，
+    最坏 30s+。缓存 30s，避免每次 ping 后的探测都重跑一遍。
+    """
+    now = time.time()
+    with _STATUS_LOCK:
+        if not force and _STATUS_CACHE["data"] is not None and (now - _STATUS_CACHE["ts"]) < STATUS_TTL:
+            return list(_STATUS_CACHE["data"])
+    data = [status_of(tid, t) for tid, t in TOOLS.items()]
+    with _STATUS_LOCK:
+        _STATUS_CACHE["ts"] = now
+        _STATUS_CACHE["data"] = list(data)
+    return data
 
 
 def launch(tid):
@@ -244,22 +273,33 @@ def launch(tid):
             subprocess.Popen(exe, shell=True, cwd=str(Path(exe).parent))
         else:
             subprocess.Popen([exe], shell=False, cwd=str(Path(exe).parent))
-        return True, "已启动 " + t["name"] + " :: " + exe
+        # 轮14：与 /api/log 脱敏口径一致——回给前端的也只保留文件名，
+        # 不把本机绝对路径（含用户名/安装布局）显示在页面状态栏里。
+        return True, "已启动 " + t["name"] + " :: " + Path(exe).name
     except Exception as e:
         return False, "启动失败: " + str(e)
 
 
 def install(tid):
+    """轮12：所有出口统一在 finally 落终态。
+
+    v1.9 只有 winget 分支写状态，pip 成功/失败、超时、异常四条出口直接 return，
+    状态永久停在 pending（用户看到"安装中"永不结束，重启也不自愈）。
+    改为单一 final_state 变量 + finally 写盘，杜绝"新增分支又忘记写状态"。
+    """
     t = TOOLS.get(tid)
     if not t:
         return False, "未知工具 id: " + tid
     _set_install_state(tid,"pending","started")
+    final_state = None
     try:
         if t["kind"] == "cli" and t.get("pip"):
             r = subprocess.run([sys.executable, "-m", "pip", "install", t["pip"]],
                                capture_output=True, text=True, timeout=600)
             ok = r.returncode == 0
-            return ok, ("pip 安装成功: " + t["pip"]) if ok else ("pip 失败: " + r.stderr[-300:])
+            final_state = ("succeeded" if ok else "failed",
+                           ("pip 安装成功: " + t["pip"]) if ok else ("pip 失败: " + r.stderr[-300:]))
+            return ok, final_state[1]
         if t.get("winget"):
             cmd = ["winget", "install", "--id", t["winget"], "--exact", "--silent",
                    "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"]
@@ -269,18 +309,25 @@ def install(tid):
             already = ("already installed" in out.lower() or
                        "已安装" in out or "已安装的版本" in out)
             ok = r.returncode == 0 or already
-            _set_install_state(tid, "succeeded" if ok else "failed", out if ok else out[-300:])
+            final_state = ("succeeded" if ok else "failed", out if ok else out[-300:])
             if ok:
                 return True, "winget 安装完成: " + t["winget"]
             return False, "winget 失败: " + out[-300:] + "（如需重试请先检查是否残留部分安装）"
-        _set_install_state(tid, "manual")
+        final_state = ("manual", "无 winget/pip 一键路径，需手动安装")
         return False, t["name"] + " 需要手动安装（无 winget/pip 一键路径），已为你打开官方页面"
     except subprocess.TimeoutExpired:
         # 轮15：按分支给正确超时数字（pip=10分钟 / winget=15分钟）
         limit = "10 分钟" if (t.get("kind") == "cli") else "15 分钟"
+        final_state = ("failed", "安装超时（>" + limit + "）")
         return False, "安装超时（>" + limit + "），请手动检查"
     except Exception as e:
+        final_state = ("failed", "安装异常: " + str(e))
         return False, "安装异常: " + str(e)
+    finally:
+        if final_state:
+            _set_install_state(tid, final_state[0], final_state[1])
+        else:   # 兜底：任何未预期路径都不留 pending
+            _set_install_state(tid, "failed", "未预期退出")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -367,6 +414,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")  # 轮10
         self.send_header("Pragma", "no-cache")
         self.send_header("Content-Length", str(len(body)))
+        # 轮20：终止连接的响应必须显式告知客户端，不能只靠 close_connection + EOF 让它猜
+        if self.close_connection:
+            self.send_header("Connection", "close")
         self._cors()
         self.end_headers()
         self.wfile.write(body)
@@ -391,7 +441,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": False, "error": "challenge requires studio.html referer"}, 403)
             return self._json({"ok": True, "token": _BRIDGE_TOKEN, "service": SERVICE})
         if u.path == "/api/status":
-            return self._json({"ok": True, "tools": all_status()})
+            fresh = parse_qs(u.query).get("fresh", [""])[0] == "1"
+            return self._json({"ok": True, "tools": all_status(force=fresh),
+                               "cached": not fresh})
         if u.path == "/api/log":
             txt = LOG.read_text(encoding="utf-8")[-4000:] if LOG.exists() else ""
             return self._json({"ok": True, "log": txt})
@@ -400,13 +452,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self._guard(): return
         if self._token_guard(): return
-        # 轮6：消费并丢弃请求体（上限 64KB，防滥用）；避免残留 body 污染下一次请求
+        # 轮11：兑现"不污染下一次请求"的承诺。HTTP/1.1 keep-alive 下，
+        # 只读 min(n,65536) 会把剩余字节留在流里，被当成下一个请求的方法行。
+        # 因此超限直接 413 并关闭连接；合法大小则精确读满 n 字节。
         try:
             n = int(self.headers.get('Content-Length', '0') or 0)
         except ValueError:
             n = 0
+        if n < 0 or n > 65536:
+            self.close_connection = True
+            return self._json({"ok": False, "error": "request body too large (max 64KB)"}, 413)
         if n > 0:
-            self.rfile.read(min(n, 65536))
+            got = self.rfile.read(n)
+            if len(got) != n:          # 对端提前断开，同样不能复用这条连接
+                self.close_connection = True
         u = urlparse(self.path)
         qs = parse_qs(u.query)
         tid = (qs.get("id") or [""])[0]
@@ -425,6 +484,7 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 with _INSTALL_LOCK:
                     _INSTALLING.discard(tid)
+                invalidate_status_cache()   # 轮15：安装后状态必须立刻重算，不能等 TTL
             w("INSTALL %s -> %s (%s)" % (tid, "OK" if ok else "FAIL", msg))
             return self._json({"ok": ok, "message": msg})
         self._json({"ok": False, "error": "not found"}, 404)
