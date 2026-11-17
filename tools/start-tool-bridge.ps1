@@ -16,10 +16,15 @@ $script= Join-Path $here 'tool-bridge.py'
 $url   = 'http://127.0.0.1:7843/api/ping'
 
 function Test-Bridge {
-  try {
-    $r = Invoke-RestMethod -Uri $url -TimeoutSec 2
-    return ($r.ok -eq $true)
-  } catch { return $false }
+  # Round12: retry to avoid false-negative during slow cold start (window race -> 2nd instance)
+  for ($i=0; $i -lt 3; $i++) {
+    try {
+      $r = Invoke-RestMethod -Uri $url -TimeoutSec 1
+      if ($r.ok -eq $true) { return $true }
+    } catch { }
+    if ($i -lt 2) { Start-Sleep -Milliseconds 800 }
+  }
+  return $false
 }
 
 if ($Status) {

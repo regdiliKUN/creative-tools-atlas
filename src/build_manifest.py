@@ -58,6 +58,7 @@ FILES = [
     "迭代记录/迭代记录-v6.md",
     "迭代记录/迭代记录-v7.md",
     "迭代记录/迭代记录-v8.md",
+    "迭代记录/迭代记录-v9.md",
     "快捷方式工具/shortcut.ps1",
     "快捷方式工具/resolve-desktop.ps1",
     "快捷方式工具/rebuild-shortcut.ps1",
@@ -82,7 +83,7 @@ def main():
     lines = [
         "# 创作工具星图 · 文件清单与校验基线",
         "",
-        "版本：v1.8.0　生成日期：" + date.today().isoformat(),
+        "版本：v1.9.0　生成日期：" + date.today().isoformat(),
         "",
         "| 文件 | 字节 | SHA-256（前16位） |",
         "|---|---:|---|",
@@ -106,7 +107,7 @@ def main():
         if not f.is_file(): continue
         rel=str(f.relative_to(BASE)).replace("\\","/")
         if rel=="MANIFEST.md" or "_internal" in f.parts or "__pycache__" in f.parts: continue
-        if f.name=="tool-bridge.log": continue
+        if f.name in ("tool-bridge.log","tool-bridge.log.1","install-state.json"): continue
         if rel not in declared: extra.append(rel)
     if extra:
         print("ERROR: files in package but NOT declared in FILES (add them or exclude):", file=sys.stderr)

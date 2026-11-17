@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.8.0)
+"""创作工具星图 · 自动化质量自检套件 (v1.9.0)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.8.0"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v1.9.0"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -148,7 +148,7 @@ def check_manifest_integrity():
     deliverables = [str(p.relative_to(BASE)).replace("\\", "/")
                     for p in BASE.rglob("*")
                     if p.is_file() and p.name != "MANIFEST.md" and "_internal" not in p.parts
-                    and p.name not in ("tool-bridge.log",) and "__pycache__" not in p.parts]
+                    and p.name not in ("tool-bridge.log","tool-bridge.log.1","install-state.json") and "__pycache__" not in p.parts]
     uncovered = [d for d in deliverables if d not in entries]
     check("清单/无遗漏", not uncovered,
           f"交付文件 {len(deliverables)} 个" if not uncovered else "漏:" + ",".join(uncovered))

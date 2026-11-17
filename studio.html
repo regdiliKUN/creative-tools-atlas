@@ -2,11 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' http://127.0.0.1:7843; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>创作工坊 · 产出任务包 | 创作工具星图</title>
 <style>
   :root{color-scheme:dark;
-    --bg:#0b0e17;--panel:#151b2c;--line:#28324a;--text:#e8edf7;--muted:#98a4bd;--dim:#6d7893;
+    --bg:#0b0e17;--panel:#151b2c;--line:#28324a;--text:#e8edf7;--muted:#98a4bd;--dim:#8491ad;
     --paint:#ff9e7d;--model:#5fd0e6;--ai:#b794ff;--figure:#ffd479;--ok:#7ee0a8;--warn:#ffb86b;
   }
   *{box-sizing:border-box}
@@ -33,6 +34,10 @@
   input[type=text],textarea,select{width:100%;background:#0e1321;border:1px solid var(--line);border-radius:9px;
     color:var(--text);padding:9px 11px;font-size:13.5px;font-family:inherit;line-height:1.5}
   input[type=text]:focus,textarea:focus,select:focus{outline:2px solid rgba(183,148,255,.45);outline-offset:1px}
+  /* 轮17：WCAG 2.4.7 焦点可见——键盘用户必须能看清当前焦点 */
+  :focus-visible{outline:2px solid var(--ai)!important;outline-offset:2px!important}
+  .wf-card:focus-visible,.card:focus-visible{outline:3px solid var(--ai)!important;outline-offset:2px!important}
+  .tbtn:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--model)!important;outline-offset:2px!important}
   textarea{resize:vertical;min-height:78px}
   .full{grid-column:1/-1}
   .choices{display:flex;flex-wrap:wrap;gap:8px}
@@ -176,6 +181,11 @@
   @media(max-width:900px){.wf-grid{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}.wf-grid{grid-template-columns:1fr}}
   @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}}
+  /* 轮20：尊重减少动画偏好（前庭敏感用户） */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+    .card:hover,.wf-card:hover,button:hover{transform:none!important}
+  }
   @media print{
     body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact}
     .panel,.tool,.hist,pre,.badge{border:1px solid #bbb!important;background:#fff!important;box-shadow:none}
@@ -194,13 +204,13 @@
 <body>
 <div class="wrap" role="main" aria-label="创作工坊：生成创作任务包">
 
-  <div class="kicker">Production Studio · v1.8.0</div>
+  <div class="kicker">Production Studio · v1.9.0</div>
   <h1>创作<span class="g">工坊</span></h1>
   <p class="lede">把星图里的工具真正用起来：填一次需求，产出一份能直接拿去干活的<strong>创作任务包</strong>——提示词、工具链（同功能优中选优）、执行清单、许可证警示，可复制、可导出、可本地留存。</p>
   <div class="ver">纯本地运行 · 不上传任何输入 · 数据口径 2026-11-16 快照 · 工具链接仅在点击时访问网络</div>
   <div class="bridge" id="bridgeBar">
     <span class="dot" id="bridgeDot"></span>
-    <span id="bridgeText">正在检测本地工具桥…</span>
+    <span id="bridgeText" role="status">正在检测本地工具桥…</span>
     <button id="bridgeStart" style="display:none">启动工具桥</button>
     <button id="bridgeRefresh">刷新状态</button>
   </div>
@@ -291,7 +301,8 @@
       <button id="save" disabled>保存到本地</button>
       <button id="print" disabled>打印 / 存 PDF</button>
     </div>
-    <div class="dirty-note" id="dirtyNote" role="status" aria-live="polite">⚠ 需求或工作流已变更，上面仍是上次生成的任务包。请重新点「生成创作任务包」；保存/导出已暂禁用以免存错。</div>
+    <div class="dirty-note" id="dirtyNote">⚠ 需求或工作流已变更，上面仍是上次生成的任务包。请重新点「生成创作任务包」；保存/导出已暂禁用以免存错。</div>
+    <div class="sr" id="dirtyLive" role="status" aria-live="polite"></div>
     <div class="status" id="outStatus" role="status" aria-live="polite"></div>
   </div>
 
@@ -326,8 +337,20 @@
 
 <script>
 "use strict";
+// 轮9修正：只在【跨源】iframe 嵌套时跳出。同源嵌入（如本地预览面板）必须放行，
+// 否则 frame-busting 会导致页面反复重载，脚本无法执行（点击即启动功能失效）。
+try{
+  if(window.top!==window.self){
+    // 能读到 top.location.href 说明同源——放行；跨域读取会抛异常——跳出
+    var _topHref=window.top.location.href;
+    if(_topHref && new URL(_topHref).origin!==location.origin)
+      window.top.location=window.self.location;
+  }
+}catch(e){
+  try{ window.top.location=window.self.location; }catch(e2){}
+}
 /* ---------------------------------------------------------------- 工作流支线定义 */
-/* 创作工坊 · 工作流支线定义 (v1.8.0)
+/* 创作工坊 · 工作流支线定义 (v1.9.0)
    每条工作流 = 一个独立目标，含专属工具(上下游顺序)、步骤、操作提示、输入项。
    设计原则：选需求 → 进支线 → 只看相关工具 → 按序开工。
    全部工具名严格复用 studio.html GROUPS 里的 n 字段。 */
@@ -779,7 +802,8 @@ function timeoutFetch(url, opts, ms){
 }
 let bridgeOn=false, toolStatus={};
 const pendingTools=new Set();  // 轮5：正在启动/安装的工具 id
-let detecting=false, detectGen=0;  // 轮9：桥探测互斥 + 代际（防旧结果覆盖新）
+let detecting=false, detectGen=0;
+let bridgeToken=null;  // 轮1：challenge token  // 轮9：桥探测互斥 + 代际（防旧结果覆盖新）
 // 工具名 -> bridge id 映射（桥里注册的 19 个）
 const T2B={
   'Krita':'krita','Blender':'blender','FreeCAD':'freecad','OpenSCAD':'openscad',
@@ -797,17 +821,29 @@ async function detectBridge(){
   try{
     const r=await timeoutFetch(BRIDGE+'/api/ping',{},1500);
     const d=await r.json();
-    on=!!d.ok;
-  }catch(e){on=false;}
+    // 轮2：校验身份标识，挡住任意占用端口的假服务
+    on = !!d.ok && d.service==='atlas-tool-bridge' && !!d.version;
+    if(on){
+      // 轮1：向桥申请 token（桥端校验 Referer 来自 studio.html）
+      try{
+        const cr=await timeoutFetch(BRIDGE+'/api/challenge',{},1500);
+        const cd=await cr.json();
+        bridgeToken = cd.ok ? cd.token : null;
+      }catch(e){ bridgeToken=null; }
+    } else bridgeToken=null;
+  }catch(e){on=false; bridgeToken=null;}
   finally{ detecting=false; }
   if(myGen!==detectGen) return;   // 已有更新的探测在跑，本次结果作废
   bridgeOn=on;
   const bar=$('bridgeBar');
   bar.classList.toggle('on',bridgeOn);
   $('bridgeDot').style.background=bridgeOn?'var(--ok)':'var(--warn)';
-  $('bridgeText').textContent=bridgeOn
-    ? '本地工具桥已连接 · 可点击启动 / 一键安装本机工具'
-    : '本地工具桥未运行 · 工具仍可点开仓库页（想点击即启动，请启动工具桥）';
+  const authed = bridgeOn && !!bridgeToken;
+  $('bridgeText').textContent = bridgeOn && !authed
+    ? '检测到工具桥，但未通过安全校验（可能浏览器未发送来源信息）· 请改用内置浏览器打开本页'
+    : authed
+      ? '本地工具桥已连接 · 可点击启动 / 一键安装本机工具'
+      : '本地工具桥未运行 · 工具仍可点开仓库页（想点击即启动，请启动工具桥）';
   $('bridgeStart').style.display=bridgeOn?'none':'inline-block';
   if(bridgeOn) await loadToolStatus();
   else toolStatus={};
@@ -823,25 +859,38 @@ async function loadToolStatus(){
 }
 async function callBridge(action,id,btn){
   if(!bridgeOn){setStatus($('outStatus'),'工具桥未运行，请先点上方「启动工具桥」。',true);return;}
+  if(!bridgeToken){setStatus($('outStatus'),'工具桥未通过安全校验，请点「刷新状态」或改用内置浏览器打开本页。',true);return;}
   // 轮5：用 pending 数据模型而非 DOM 引用——重绘后状态仍然正确
   if(pendingTools.has(id)){setStatus($('outStatus'),'该工具正在处理中，请稍候。',true);return;}
   pendingTools.add(id);
   refreshToolViews();
   try{
-    const r=await timeoutFetch(BRIDGE+'/api/'+action+'?id='+encodeURIComponent(id),{method:'POST'},60000);
+    const r=await timeoutFetch(BRIDGE+'/api/'+action+'?id='+encodeURIComponent(id),
+      {method:'POST',headers:{'Content-Type':'application/json','X-Bridge-Token':bridgeToken}},60000);
     const d=await r.json();
     setStatus($('outStatus'),d.message||'完成',!d.ok);
     if(action==='install') await loadToolStatus();
-  }catch(e){setStatus($('outStatus'),'调用失败：'+e.message,true);}
+  }catch(e){
+    setStatus($('outStatus'),'调用失败：'+(e&&e.message||String(e))+'。请点工具按钮重试。',true);
+  }
   finally{
     pendingTools.delete(id);
     refreshToolViews();   // 统一重绘，按钮状态由 pending 集决定
   }
 }
 function refreshToolViews(){
+  // 轮18：保存焦点——全量 innerHTML 重建会丢弃焦点，重建后按稳定 key 恢复
+  const ae=document.activeElement;
+  const key=ae && ae.dataset ? ae.dataset.focuskey : null;
   renderTools($('q').value);
   renderBranches();
   if(last && last.p) renderExec(last.p);
+  if(key){
+    try{
+      const el=document.querySelector('[data-focuskey="'+CSS.escape(key)+'"]');
+      if(el) el.focus();
+    }catch(e){}
+  }
 }
 function toolBtn(name){
   const id=T2B[name];
@@ -852,10 +901,10 @@ function toolBtn(name){
   if(!bridgeOn) return '';
   if(st&&st.installed && st.kind==='cli') return `<span class="tbtn" title="命令行库，在脚本里 import 使用">命令行</span>`;
   if(st&&st.installed && st.kind==='suite') return `<span class="tbtn" title="需先装框架与模型权重">需配置</span>`;
-  if(st&&st.installed) return `<button class="tbtn" data-launch="${id}">启动</button>`;
-  if(st&&st.kind==='web') return `<button class="tbtn" data-launch="${id}">打开</button>`;
-  if(st&&(st.winget||st.pip)) return `<button class="tbtn need" data-install="${id}">一键安装</button>`;
-  return `<button class="tbtn need" data-install="${id}">一键安装</button>`;
+  if(st&&st.installed) return `<button class="tbtn" data-launch="${id}" data-focuskey="launch:${id}">启动</button>`;
+  if(st&&st.kind==='web') return `<button class="tbtn" data-launch="${id}" data-focuskey="launch:${id}">打开</button>`;
+  if(st&&(st.winget||st.pip)) return `<button class="tbtn need" data-install="${id}" data-focuskey="install:${id}">一键安装</button>`;
+  return `<button class="tbtn need" data-install="${id}" data-focuskey="install:${id}">一键安装</button>`;
 }
 function bindToolBtns(root){
   (root||document).querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>callBridge('launch',b.dataset.launch,b));
@@ -871,7 +920,24 @@ function toolByName(n){ return GROUPS.flatMap(g=>g.tools).find(x=>x.n===n); }
 /* ---------------------------------------------------------------- 工具函数 */
 const $ = id => document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function safeName(s){return (s||"创作任务包").replace(/[\\/:*?"<>|]/g,"_").trim().slice(0,50)||"创作任务包";}
+function safeName(s){
+  let r=String(s||"").replace(/[\\/:*?"<>|]/g,"_")     // 非法标点
+    .replace(/[\x00-\x1f\x7f]/g,"_")                  // 轮13：控制字符
+    .replace(/[.\s]+$/g,"")                            // 轮13：尾随点/空格
+    .trim();
+  if(/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i.test(r)) r="_"+r;  // 轮13：Windows 保留名
+  r=Array.from(r).slice(0,50).join("");                  // 轮13：按 Unicode 码点截断（不切代理对）
+  return r||"创作任务包";
+}
+// 轮7：Markdown 专用转义——用户输入进入 .md 前压平换行、转义结构标记，避免破坏表格/代码块
+function mdInline(v){
+  return String(v==null?"":v)
+    .replace(/\r\n?/g," ").replace(/\n/g," ")       // 多行压成一行
+    .replace(/`/g,"\\`")                             // 反引号避免闭合代码围栏
+    .replace(/\|/g,"\\|")                           // 竖线避免破坏表格
+    .replace(/^([\s]*)([#>\-+])([\s])/gm,"$1\\$2$3")  // 行首结构符转义
+    .trim();
+}
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
 function setStatus(el,msg,err){el.textContent=msg;el.classList.toggle("err",!!err);}
 
@@ -1003,10 +1069,13 @@ function checkDirty(){
   const now=profileSig(profile());
   const dirty = now!==lastSig;
   $("dirtyNote").style.display = dirty?'block':'none';
+  // 轮19：读屏播报靠文本变化（display 切换不触发 aria-live）
+  $("dirtyLive").textContent = dirty ? '需求已变更，当前任务包已过期，请重新生成。' : '';
   ["save","download","print"].forEach(id=>$(id).disabled=dirty);
 }
 function markClean(){ lastSig = last?profileSig(profile()):null;
-  $("dirtyNote").style.display='none'; }
+  $("dirtyNote").style.display='none';
+  if($("dirtyLive"))$("dirtyLive").textContent=''; }
 
 /* ---------------------------------------------------------------- 优中选优 */
 function applicable(t,p){
@@ -1044,7 +1113,7 @@ function rankTools(group,p){
 /* ---------------------------------------------------------------- 提示词包 */
 function promptPack(p){
   const subj = p.subject || "原创角色";
-  const feat = p.extra ? "，" + p.extra : "";
+  const feat = p.extra ? "，" + mdInline(p.extra) : "";
   // 依据选中工作流的 promptKind 生成专属提示词（多选时取第一条主工作流）
   const wf = (p.workflows||[]).map(id=>WORKFLOWS.find(w=>w.id===id)).filter(Boolean)[0];
   const kind = wf ? wf.promptKind : "character";
@@ -1135,7 +1204,7 @@ function buildPackage(p){
     const wfNames=p.workflows.map(id=>{const w=WORKFLOWS.find(x=>x.id===id);return w?w.label:id;});
     L.push(`- 工作流：${wfNames.join(" / ")}`);
   }
-  if(p.extra) L.push(`- 补充：${p.extra}`);
+  if(p.extra) L.push(`- 补充：${mdInline(p.extra)}`);
   L.push("","## 2. 提示词包（可直接粘贴）","");
   const pk=promptPack(p);
   L.push("### 正面提示词","", "```text", pk.pos, "```","");
@@ -1243,8 +1312,22 @@ function renderTools(term){
 }
 
 /* ---------------------------------------------------------------- 本地留存 */
-const HKEY="atlas-studio-history";
-function getHist(){try{const a=JSON.parse(localStorage.getItem(HKEY)||"[]");return Array.isArray(a)?a:[];}catch(e){return [];}}
+// 轮4：命名空间 + 版本隔离，避免与同源其他应用/旧版互相覆盖
+const HKEY="atlas:studio:v1.9:history";
+const HKEY_LEGACY="atlas-studio-history";
+// 一次性迁移旧键数据（仅当新键不存在时）
+try{
+  if(!localStorage.getItem(HKEY) && localStorage.getItem(HKEY_LEGACY)){
+    localStorage.setItem(HKEY,localStorage.getItem(HKEY_LEGACY));
+  }
+}catch(e){}
+function getHist(){
+  try{
+    const a=JSON.parse(localStorage.getItem(HKEY)||"[]");
+    // 轮3：过滤非对象元素（null/字符串/数字），避免 renderHist 的 esc(h.time) 抛错
+    return Array.isArray(a)?a.filter(h=>h&&typeof h==='object'&&!Array.isArray(h)):[];
+  }catch(e){return [];}
+}
 function setHist(a){try{localStorage.setItem(HKEY,JSON.stringify(a.slice(0,20)));return true;}catch(e){return false;}}
 function renderHist(){
   const a=getHist();
@@ -1336,14 +1419,22 @@ function clip(text,okMsg){
   } else fallback(text,done);
 }
 function fallback(text,done){
-  const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
-  document.body.appendChild(ta);ta.select();
-  try{document.execCommand("copy");done();}catch(e){setStatus($("outStatus"),"复制失败，请手动选中上面的文本复制。",true);}
+  const ta=document.createElement("textarea");ta.value=text;ta.readOnly=true;  // 轮15：iOS 需 readOnly
+  ta.style.position="fixed";ta.style.top="0";ta.style.left="0";
+  ta.style.opacity="0";                       // 保持不可见但可focus（不用 display:none）
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  if(ta.setSelectionRange){try{ta.setSelectionRange(0,text.length);}catch(e){}}
+  let ok=false;
+  try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
   document.body.removeChild(ta);
+  if(ok) done();
+  else setStatus($("outStatus"),"复制失败，请手动选中上面的文本复制。",true);
 }
 function download(){
   if(!last)return;
-  const blob=new Blob([last.text],{type:"text/markdown;charset=utf-8"});
+  // 轮14：BOM 让旧版 Windows 记事本正确识别 UTF-8（新版也能正常显示 BOM）
+  const blob=new Blob(["\uFEFF",last.text],{type:"text/markdown;charset=utf-8"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
   a.download=safeName(last.name)+".md";document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
@@ -1409,7 +1500,11 @@ $("q").addEventListener("input",e=>{
   _searchTimer=setTimeout(()=>renderTools(v),150);
 });
 
-buildGoals();renderWfSelect();renderBranches();renderHist();detectBridge();
+// 轮3/20：初始化逐项隔离 + async 兜底，任一处异常不拖垮全局
+[buildGoals,renderWfSelect,renderBranches,renderHist].forEach(fn=>{
+  try{fn();}catch(e){console.error('[atlas init]',fn.name,e);}
+});
+detectBridge().catch(e=>console.error('[atlas bridge init]',e));
 // 轮4：任何需求字段变化都触发脏检测
 ["proj","subject","style","vram","usage","comm","extra"].forEach(id=>{
   $(id).addEventListener("input",checkDirty); $(id).addEventListener("change",checkDirty);

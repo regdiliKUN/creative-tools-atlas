@@ -13,9 +13,11 @@
   POST /api/install?id=<id>     一键安装（winget / pip）
   GET  /api/log                 最近操作日志
 """
+import atexit
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import threading
@@ -26,6 +28,9 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 PORT = 7843
+SERVICE = "atlas-tool-bridge"
+VERSION = "1.9.0"
+_BRIDGE_TOKEN = secrets.token_urlsafe(24)   # 轮1：challenge token，仅内存，进程重启即换
 _LOG_LOCK = threading.Lock()          # 轮20：多线程日志串行化
 _INSTALL_LOCK = threading.Lock()      # 轮20：安装去重（同一时刻只允许一个）
 _INSTALLING = set()
@@ -33,6 +38,7 @@ _INSTALLING = set()
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 HERE = Path(__file__).resolve().parent
 LOG = HERE / "tool-bridge.log"
+INSTALL_STATE = HERE / "install-state.json"   # 轮9：安装状态记录
 
 # 工具定义：id -> {name, kind, winget, pip, exe(glob 候选), args, note}
 # kind: desktop=有 exe 可启动 / cli=pip 包 / suite=依附宿主(ComfyUI/Blender) / web=云端或源码
@@ -59,8 +65,17 @@ TOOLS = {
 }
 
 
+def _redact(msg):
+    """轮11：日志脱敏——去掉用户名与完整路径，仅保留文件名，降低本地信息泄露。"""
+    # 用户目录：C://Users//<name>... -> <userdir>...
+    msg = re.sub(r"[A-Za-z]:\\Users\\[^\\\s/]+", "<userdir>", msg)
+    # 任意 .exe 的完整路径 -> 仅保留文件名（路径可含空格，故用贪婪到最后一个反斜杠）
+    msg = re.sub(r"[A-Za-z]:\\[^\n]*?\\([^\\\n/]+\.exe)", r"\1", msg)
+    return msg
+
+
 def w(msg):
-    line = "[%s] %s" % (time.strftime("%H:%M:%S"), msg)
+    line = "[%s] %s" % (time.strftime("%H:%M:%S"), _redact(str(msg)))
     print(line, flush=True)
     try:
         with _LOG_LOCK:
@@ -84,10 +99,23 @@ def registry_exe(names):
         return None
     try:
         import winreg
+        # 轮8：HKLM 优先——HKCU 卸载项当前用户可写，可被注册假条目劫持执行
         roots = [(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
-                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
-                 (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")]
-        for hive, sub in roots:
+                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall")]
+        hkcu_roots = [(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")]
+        def safe_candidate(p):
+            """轮8：只接受规范化的绝对路径，拒绝 .. / 相对路径 / 非 exe。"""
+            try:
+                q = Path(p)
+                if not q.is_absolute(): return None
+                q = q.resolve()
+                if ".." in p.replace("\\", "/").split("/"): return None
+                if q.suffix.lower() != ".exe" or not q.is_file(): return None
+                return str(q)
+            except Exception:
+                return None
+        # 先扫 HKLM（可信），无结果再扫 HKCU（用户可写，仅兜底）
+        for hive, sub in roots + hkcu_roots:
             try:
                 key = winreg.OpenKey(hive, sub)
             except Exception:
@@ -111,8 +139,9 @@ def registry_exe(names):
                     except Exception:
                         continue
                     v = str(v).strip('"').split(",")[0]
-                    if v.lower().endswith(".exe") and Path(v).is_file():
-                        return v
+                    if v.lower().endswith(".exe"):
+                        sv=safe_candidate(v)
+                        if sv: return sv
                     if v and Path(v).is_dir():
                         for exe in Path(v).rglob("*.exe"):
                             low = exe.name.lower()
@@ -121,7 +150,8 @@ def registry_exe(names):
                                     k in low for k in ("slicer","krita","freecad","cura",
                                                       "uvtools","blender","openscad","meshlab",
                                                       "opentoonz","aseprite")):
-                                return str(exe)
+                                sv=safe_candidate(str(exe))
+                                if sv: return sv
                 try:
                     winreg.CloseKey(sk)
                 except Exception:
@@ -155,6 +185,26 @@ def pip_installed(mod):
         return r.returncode == 0
     except Exception:
         return False
+
+
+def _load_install_state():
+    try:
+        d=json.loads(INSTALL_STATE.read_text(encoding="utf-8"))
+        return d if isinstance(d,dict) else {}
+    except Exception:
+        return {}
+
+def _save_install_state(st):
+    try:
+        with _LOG_LOCK:
+            INSTALL_STATE.write_text(json.dumps(st,ensure_ascii=False,indent=2),encoding="utf-8")
+    except Exception:
+        pass
+
+def _set_install_state(tid, state, extra=""):
+    st=_load_install_state()
+    st[tid]={"state":state,"time":time.strftime("%Y-%m-%d %H:%M:%S"),"detail":extra[:300]}
+    _save_install_state(st)
 
 
 def status_of(tid, t):
@@ -203,6 +253,7 @@ def install(tid):
     t = TOOLS.get(tid)
     if not t:
         return False, "未知工具 id: " + tid
+    _set_install_state(tid,"pending","started")
     try:
         if t["kind"] == "cli" and t.get("pip"):
             r = subprocess.run([sys.executable, "-m", "pip", "install", t["pip"]],
@@ -218,7 +269,11 @@ def install(tid):
             already = ("already installed" in out.lower() or
                        "已安装" in out or "已安装的版本" in out)
             ok = r.returncode == 0 or already
-            return ok, ("winget 安装完成: " + t["winget"]) if ok else ("winget 失败: " + out[-300:])
+            _set_install_state(tid, "succeeded" if ok else "failed", out if ok else out[-300:])
+            if ok:
+                return True, "winget 安装完成: " + t["winget"]
+            return False, "winget 失败: " + out[-300:] + "（如需重试请先检查是否残留部分安装）"
+        _set_install_state(tid, "manual")
         return False, t["name"] + " 需要手动安装（无 winget/pip 一键路径），已为你打开官方页面"
     except subprocess.TimeoutExpired:
         # 轮15：按分支给正确超时数字（pip=10分钟 / winget=15分钟）
@@ -264,7 +319,28 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Bridge-Token")
+
+    def _referer_ok(self):
+        """轮9修正：校验来源为本机页面。恶意 file:// HTML 的 Referer 是 file:// 开头，在此被拒。
+        注意：不能要求 Referer 含 studio.html——内置浏览器的静态代理会改写路径，
+        合法页面的 Referer 形如 http://127.0.0.1:5104/（不含文件名）。"""
+        ref = (self.headers.get("Referer") or "").lower()
+        if not ref: return False
+        try:
+            o = urlparse(ref)
+            if o.scheme in ("http","https") and (o.hostname or "").lower() in LOCAL_HOSTS:
+                return True
+            # file:// 是交付包的正常打开方式（双击 studio.html）。
+            # 协议层无法区分合法工坊与恶意本地 HTML——这是 file:// 的固有限制，
+            # 已在迭代记录中如实标注。这里只放行明确指向 studio.html 的 file 来源，
+            # 并记警告日志留痕；恶意 HTML 若伪装该文件名，需用户主动双击，属社工范畴。
+            if o.scheme == "file" and ref.rstrip("/").lower().endswith("studio.html"):
+                w("NOTE file:// origin accepted (inherent file:// trust limit)")
+                return True
+            return False
+        except Exception:
+            return False
 
     def _guard(self):
         """统一入口守卫：不合法直接 403 并返回 True。"""
@@ -275,10 +351,21 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
+    def _token_guard(self):
+        """轮1/6：敏感操作要求自定义头 token（挡 form submit 与无 token 的 fetch）。"""
+        got = self.headers.get("X-Bridge-Token", "")
+        if got != _BRIDGE_TOKEN:
+            w("REJECT token-less sensitive request")
+            self._json({"ok": False, "error": "missing/invalid bridge token"}, 403)
+            return True
+        return False
+
     def _json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")  # 轮10
+        self.send_header("Pragma", "no-cache")
         self.send_header("Content-Length", str(len(body)))
         self._cors()
         self.end_headers()
@@ -295,7 +382,14 @@ class Handler(BaseHTTPRequestHandler):
         if self._guard(): return
         u = urlparse(self.path)
         if u.path == "/api/ping":
-            return self._json({"ok": True, "service": "atlas-tool-bridge", "port": PORT})
+            # 轮2：公开可验证的身份标识（前端核对 service/version，挡住假服务）
+            return self._json({"ok": True, "service": SERVICE, "version": VERSION, "port": PORT})
+        if u.path == "/api/challenge":
+            # 轮1：challenge token 只发给来自 studio.html 的请求
+            if not self._referer_ok():
+                w("CHALLENGE denied (referer=%s)" % (self.headers.get("Referer", "-")))
+                return self._json({"ok": False, "error": "challenge requires studio.html referer"}, 403)
+            return self._json({"ok": True, "token": _BRIDGE_TOKEN, "service": SERVICE})
         if u.path == "/api/status":
             return self._json({"ok": True, "tools": all_status()})
         if u.path == "/api/log":
@@ -305,6 +399,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self._guard(): return
+        if self._token_guard(): return
         # 轮6：消费并丢弃请求体（上限 64KB，防滥用）；避免残留 body 污染下一次请求
         try:
             n = int(self.headers.get('Content-Length', '0') or 0)
@@ -349,6 +444,7 @@ def main():
         w("tool-bridge FAILED to bind port %d: %s" % (PORT, e))
         w("Maybe another instance is running; use start-tool-bridge.ps1 -Stop first.")
         sys.exit(1)
+    atexit.register(lambda: w("tool-bridge exiting."))
     w("tool-bridge ready.")
     try:
         srv.serve_forever()
