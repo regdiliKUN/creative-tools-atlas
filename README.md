@@ -1,11 +1,28 @@
 # 创作工具星图 · Creative Tools Atlas
 
-> 一份离线可读的 GitHub 创作工具调研星图，加一条从空白画布到可重建角色设定图的实操航线。
-> 四页纯静态 HTML（三页内容 + 一页创作工坊），零外部资源、零联网依赖；Windows 端另附一个免安装的本地启动器。
+> 一份离线可读的 GitHub 创作工具调研星图、一条实操航线，以及一个能真正调用本机软件的内容工坊。
+> v1.6.1 起带**本地工具桥**：工坊里的工具不再是冷冰冰的 GitHub 链接，而是「已装→点击启动 / 未装→一键安装」。
 
 <p align="left">
-  <strong>内容本地可读 · 无需联网 · 报告内的 GitHub 链接仅在点击时才访问网络</strong>
+  <strong>内容本地可读 · 工具点击即调用 · 效果优先排序 · 任务包直接流入执行台</strong>
 </p>
+
+## v1.6.1 新特性：本地工具链
+
+- **真装了 10 个桌面软件**（Krita / Blender / FreeCAD / OpenSCAD / MeshLab / OpenToonz / Cura / PrusaSlicer / OrcaSlicer / UVtools），winget 静默安装，100% 可被探测。
+- **本地工具桥** `tools/tool-bridge.py`：只监听 `127.0.0.1:7843` 的零依赖 HTTP 服务。工坊页通过它启动/安装工具。用法：
+
+  ```powershell
+  cd tools
+  powershell -ExecutionPolicy Bypass -File start-tool-bridge.ps1
+  ```
+
+  看到 `BRIDGE_STARTED` 后，回到工坊点「刷新状态」，工具卡片即可点击。
+
+- **效果优先**：排序以产出质量为主（TRELLIS.2 登顶），显存/性能仅标注不主导，符合"效果为优先，性能暂不考虑"。
+- **执行台**：生成任务包后自动抓取其中的工具与提示词，按阶段列出可点击按钮，不用复制粘贴。
+- **AI 引擎**：`tools/install-comfyui.ps1` 可一键装 ComfyUI 框架，**但默认不下载几十 GB 的模型权重**；体积与下载指引见 `tools/安装AI引擎说明.md`。你的显卡需为 NVIDIA（脚本按 CUDA 12.1 装 PyTorch）。
+- **迭代记录**已收进 `docs/迭代记录/` 子文件夹，根目录不再臃肿。
 
 ---
 
@@ -116,8 +133,8 @@ python src/build_manifest.py
 
 这个产出物经历了 **6 轮 × 20 轮 = 120 轮**迭代完善，每轮均记录优化目标、改动、理由与自检结果：
 
-- [第一轮](docs/迭代记录.md) · [第二轮](docs/迭代记录-v2.md) · [第三轮](docs/迭代记录-v3.md)
-- [第四轮](docs/迭代记录-v4.md) · [第五轮](docs/迭代记录-v5.md) · [第六轮](docs/迭代记录-v6.md)
+- [第一轮](docs/迭代记录/迭代记录.md) · [第二轮](docs/迭代记录/迭代记录-v2.md) · [第三轮](docs/迭代记录/迭代记录-v3.md)
+- [第四轮](docs/迭代记录/迭代记录-v4.md) · [第五轮](docs/迭代记录/迭代记录-v5.md) · [第六轮](docs/迭代记录/迭代记录-v6.md)
 - [变更日志](docs/CHANGELOG.md) · [使用说明](docs/使用说明.txt)
 
 演进主线：v1.0 裸 HTML → v1.1 软件包化 → v1.2 应用窗口与哈希校验 → v1.3 锁 bug 与外链安全 → v1.4 多用户锁隔离与语义化 → v1.5 校验器动态化 → v1.6 自动化质量保障体系 + 创作工坊（从资料陈列转向实际产出内容）。

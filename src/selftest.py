@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.6.0)
+"""创作工具星图 · 自动化质量自检套件 (v1.6.1)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.6.0"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v1.6.1"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -108,6 +108,7 @@ def check_version_consistency():
         "MANIFEST": (re.search(r"版本：(v\d+\.\d+\.\d+)", read("MANIFEST.md")) or [None, ""])[1],
         "使用说明": (re.search(r"(v\d+\.\d+\.\d+)", read("使用说明.txt")) or [None, ""])[1],
         "首页": (re.search(r"(v\d+\.\d+\.\d+)", read("index.html")) or [None, ""])[1],
+        "工坊": (re.search(r"(v\d+\.\d+\.\d+)", read("studio.html")) or [None, ""])[1],
     }
     changelog = read("CHANGELOG.md")
     first = re.search(r"^##\s+(v\d+\.\d+\.\d+)", changelog, re.M)
@@ -127,9 +128,12 @@ def check_manifest_integrity():
           f"{len(entries)} 项" if not missing else "缺失:" + ",".join(missing))
 
     # 包内顶层交付文档必须都在清单之外被覆盖（MANIFEST 自身除外）
-    deliverables = [p.name for p in BASE.iterdir()
+    # 递归扫描（迭代记录已收进 迭代记录/ 子目录）
+    deliverables = [str(p.relative_to(BASE)).replace("\\", "/")
+                    for p in BASE.rglob("*")
                     if p.is_file() and p.suffix in (".html", ".md", ".txt", ".exe", ".ico", ".png")
-                    and p.name != "MANIFEST.md"]
+                    and p.name != "MANIFEST.md" and "_internal" not in p.parts
+                    and p.name not in ("tool-bridge.log",)]
     uncovered = [d for d in deliverables if d not in entries]
     check("清单/无遗漏", not uncovered,
           f"交付文件 {len(deliverables)} 个" if not uncovered else "漏:" + ",".join(uncovered))
@@ -157,7 +161,7 @@ def check_scripts_ascii():
 
 def check_iteration_archives():
     """迭代档案：每份 20 轮且编号连续；CHANGELOG 版本数与档案数对应。"""
-    archives = sorted(BASE.glob("迭代记录*.md"))
+    archives = sorted((BASE / "迭代记录").glob("迭代记录*.md"))
     problems = []
     for p in archives:
         nums = [int(x) for x in re.findall(r"^\*\*轮\s*(\d+)", p.read_text(encoding="utf-8"), re.M)]

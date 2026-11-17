@@ -23,3 +23,8 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Tool bridge runtime
+tool-bridge.log
+__pycache__/
+*.pyc

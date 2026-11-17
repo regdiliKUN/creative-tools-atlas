@@ -87,6 +87,24 @@
     color:#b794ff;font-size:13px;text-decoration:none;backdrop-filter:blur(8px)}
   .home:hover{border-color:#b794ff}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .bridge{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;margin:0 0 22px;font-size:12.5px;background:rgba(126,224,168,.06)}
+  .bridge .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--dim)}
+  .bridge.on .dot{background:var(--ok);box-shadow:0 0 0 4px rgba(126,224,168,.14)}
+  .bridge button{padding:6px 13px;font-size:12px}
+  .tbtn{margin-left:6px;padding:3px 10px!important;font-size:11px!important;border-radius:7px!important;
+    border:1px solid var(--ok)!important;color:var(--ok)!important;background:rgba(126,224,168,.08)!important}
+  .tbtn.need{border-color:var(--warn)!important;color:var(--warn)!important;background:rgba(255,184,107,.08)!important}
+  .tbtn:hover{filter:brightness(1.2)}
+  .exec{margin-top:16px}
+  .exec .stage{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;
+    background:rgba(255,255,255,.02)}
+  .exec .stage h4{margin:0 0 8px;font-size:13.5px;color:var(--text)}
+  .exec .stage .tools{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .exec .stage .pt{font-size:11.5px;color:var(--dim);white-space:pre-wrap;max-height:76px;overflow:auto;
+    border-left:2px solid var(--ai);padding-left:10px;margin-top:8px}
+  .badge.local{color:#0b0e17;background:var(--model);border-color:transparent;font-weight:700}
+  .badge.miss{color:var(--warn);border-color:rgba(255,184,107,.4)}
   @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}}
   @media print{
     body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact}
@@ -102,10 +120,16 @@
 <body>
 <div class="wrap" role="main" aria-label="创作工坊：生成创作任务包">
 
-  <div class="kicker">Production Studio · v1.6.0</div>
+  <div class="kicker">Production Studio · v1.6.1</div>
   <h1>创作<span class="g">工坊</span></h1>
   <p class="lede">把星图里的工具真正用起来：填一次需求，产出一份能直接拿去干活的<strong>创作任务包</strong>——提示词、工具链（同功能优中选优）、执行清单、许可证警示，可复制、可导出、可本地留存。</p>
   <div class="ver">纯本地运行 · 不上传任何输入 · 数据口径 2026-11-16 快照 · 工具链接仅在点击时访问网络</div>
+  <div class="bridge" id="bridgeBar">
+    <span class="dot" id="bridgeDot"></span>
+    <span id="bridgeText">正在检测本地工具桥…</span>
+    <button id="bridgeStart" style="display:none">启动工具桥</button>
+    <button id="bridgeRefresh">刷新状态</button>
+  </div>
 
   <h2 id="sec-form">① 填需求</h2>
   <div class="panel">
@@ -188,7 +212,11 @@
     <div class="status" id="outStatus" role="status" aria-live="polite"></div>
   </div>
 
-  <h2 id="sec-tools">③ 工具全览 · 优中选优</h2>
+  <h2 id="sec-exec">③ 执行台 · 任务包直接开工</h2>
+  <p>生成任务包后，下面的执行台会<strong>自动抓取</strong>任务包里的工具与提示词——不用复制粘贴。点工具按钮即可启动本机软件（需工具桥运行中）或一键安装。</p>
+  <div class="panel exec" id="execPanel"><p id="execEmpty">尚未生成任务包。生成后这里会按阶段列出可点击的工具与对应提示词。</p><div id="execStages"></div></div>
+
+  <h2 id="sec-tools">④ 工具全览 · 效果优先</h2>
   <p>星图里介绍到的工具全部编入下方 7 个生产环节。同功能重复的一律优中选优：<span class="badge top">首选</span> 是可直接开工的那个，<span class="badge alt">备选</span> 是特定条件下的更优解，其余标注为上一代 / 研究 / 原型，避免踩坑。</p>
   <div class="filters">
     <input class="search" type="search" id="q" placeholder="筛选工具 / 关键词…" aria-label="筛选工具">
@@ -196,7 +224,7 @@
   </div>
   <div id="toolList"></div>
 
-  <h2 id="sec-hist">④ 本地留存</h2>
+  <h2 id="sec-hist">⑤ 本地留存</h2>
   <p>任务包保存在浏览器 localStorage，只在这台电脑上，不上传。可随时载入、删除。</p>
   <div class="hist" id="hist"><ul><li>暂无留存记录。</li></ul></div>
 
@@ -295,12 +323,91 @@ const GOALS = [
 ];
 const TIER_LABEL = {top:"首选",alt:"备选",legacy:"上一代",research:"研究",proto:"原型",spec:"规范",tech:"技法"};
 const TIER_RANK  = {top:0,alt:1,tech:2,proto:3,legacy:4,research:5,spec:6};
+/* 效果优先：quality 为产出质量分(10 最高)，排序时权重最大；性能/显存仅作参考信息。
+   用户明确要求「效果为优先，性能暂不考虑」。 */
+const QUALITY = {
+  "TRELLIS / TRELLIS.2":10,"Hunyuan3D 2.0":9,"Hunyuan3D-2.1":9.5,"Unique3D":8,
+  "InstantMesh":7,"TripoSR":6.5,"ComfyUI":10,"Krita AI Diffusion":9,"ControlNet":8,
+  "Krita":9,"Blender":10,"Aseprite":8,"OpenToonz":7.5,"FreeCAD":8.5,"OpenSCAD":7,
+  "CadQuery":8,"OrcaSlicer":9,"UVtools":8.5,"PrusaSlicer":8,"Cura":7.5,"MeshLab":7,
+  "instant-meshes":8,"instant-meshes-2026":8.5,"ArmorPaint":8,"MCP for Blender":7,
+  "MakeHuman":7,"VRM Add-on for Blender":9,"CharacterStudio":7.5,"VSeeFace":8,
+  "shap-e":4,"zero123plus":6,"threestudio":5,"gaussian-splatting":5,"smplx":5,
+  "three-vrm":7,"model-viewer":7,"VRMify":7,"openpose":5,"excalidraw":4,
+  "AUTOMATIC1111 WebUI":6,"Fooocus":6,"text-to-cad":6,"Assimp":6,"trimesh":7,
+  "glTF-Blender-IO":7,"VRM 规范":5
+};
 const RISK = {
   "community":"社区许可：明确排除欧盟/英国/韩国且有大用户条款，商用前逐条读",
   "EULA":"EULA：源码可读但官方二进制需购买",
   "AGPL-3.0":"AGPL-3.0：有网络服务传染性",
   "GPL-3.0":"GPL-3.0：代码嵌入分发产品需履行 copyleft"
 };
+
+/* ---------------------------------------------------------------- 本地工具桥通信 */
+const BRIDGE='http://127.0.0.1:7843';
+let bridgeOn=false, toolStatus={};
+// 工具名 -> bridge id 映射（桥里注册的 19 个）
+const T2B={
+  'Krita':'krita','Blender':'blender','FreeCAD':'freecad','OpenSCAD':'openscad',
+  'MeshLab':'meshlab','OpenToonz':'opentoonz','Cura':'cura','PrusaSlicer':'prusaslicer',
+  'OrcaSlicer':'orcaslicer','UVtools':'uvtools','Aseprite':'aseprite','ComfyUI':'comfyui',
+  'trimesh':'trimesh','CadQuery':'cadquery','Assimp':'assimp','smplx':'smplx',
+  'excalidraw':'excalidraw','CharacterStudio':'charstudio','threestudio':'threestudio'
+};
+async function detectBridge(){
+  try{
+    const r=await fetch(BRIDGE+'/api/ping',{signal:AbortSignal.timeout(1500)});
+    const d=await r.json();
+    bridgeOn=!!d.ok;
+  }catch(e){bridgeOn=false;}
+  const bar=$('bridgeBar');
+  bar.classList.toggle('on',bridgeOn);
+  $('bridgeDot').style.background=bridgeOn?'var(--ok)':'var(--warn)';
+  $('bridgeText').textContent=bridgeOn
+    ? '本地工具桥已连接 · 可点击启动 / 一键安装本机工具'
+    : '本地工具桥未运行 · 工具仍可点开仓库页（想点击即启动，请启动工具桥）';
+  $('bridgeStart').style.display=bridgeOn?'none':'inline-block';
+  if(bridgeOn) await loadToolStatus();
+  else toolStatus={};
+  renderTools($('q').value);
+  if(last && last.p) renderExec(last.p);
+}
+async function loadToolStatus(){
+  try{
+    const r=await fetch(BRIDGE+'/api/status',{signal:AbortSignal.timeout(3000)});
+    const d=await r.json();
+    toolStatus={};
+    (d.tools||[]).forEach(t=>toolStatus[t.id]=t);
+  }catch(e){}
+}
+async function callBridge(action,id,btn){
+  if(!bridgeOn){setStatus($('outStatus'),'工具桥未运行，请先点上方「启动工具桥」。',true);return;}
+  if(btn){btn.disabled=true;btn.textContent='处理中…';}
+  try{
+    const r=await fetch(BRIDGE+'/api/'+action+'?id='+encodeURIComponent(id),{method:'POST',signal:AbortSignal.timeout(60000)});
+    const d=await r.json();
+    setStatus($('outStatus'),d.message||'完成',!d.ok);
+    if(action==='install') await loadToolStatus();
+    renderTools($('q').value);
+    if(last && last.p) renderExec(last.p);
+  }catch(e){setStatus($('outStatus'),'调用失败：'+e.message,true);}
+  finally{ if(btn){btn.disabled=false;btn.textContent=action==='launch'?'启动':'一键安装';} }
+}
+function toolBtn(name){
+  const id=T2B[name];
+  if(!id) return `<a class="tbtn" href="#" onclick="return false" title="该工具为技法/模型配方，依附 ComfyUI 或 Krita 使用">依附使用</a>`;
+  const st=toolStatus[id];
+  if(!bridgeOn) return '';
+  if(st&&st.installed) return `<button class="tbtn" data-launch="${id}">启动</button>`;
+  if(st&&st.kind==='web') return `<button class="tbtn" data-launch="${id}">打开</button>`;
+  if(st&&(st.winget||st.pip)) return `<button class="tbtn need" data-install="${id}">一键安装</button>`;
+  return `<button class="tbtn need" data-install="${id}">一键安装</button>`;
+}
+function bindToolBtns(root){
+  (root||document).querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>callBridge('launch',b.dataset.launch,b));
+  (root||document).querySelectorAll('[data-install]').forEach(b=>b.onclick=()=>callBridge('install',b.dataset.install,b));
+}
 
 /* ---------------------------------------------------------------- 工具函数 */
 const $ = id => document.getElementById(id);
@@ -333,22 +440,22 @@ function applicable(t,p){
 }
 function rankTools(group,p){
   return group.tools.map(t=>{
-    let rank = TIER_RANK[t.tier] ?? 9;
-    let why  = "";
-    // 显存不足降级；无本地卡时全部本地推理项标注云端
+    const q = QUALITY[t.n] ?? 6;
+    // 效果优先：质量分主导(乘 10)，tier 仅作次要修正；显存不再是排序主因。
+    let rank = (10 - q) * 10 + (TIER_RANK[t.tier] ?? 6);
+    let why  = "效果分 " + q + "/10";
+    // 显存不足：仍会标注，但只小幅影响排序（用户说性能暂不考虑）
     if(t.vram>p.vram){
-      rank += 8;
-      why = p.vram===0 ? "需本地显卡；无卡可先用 Hugging Face Space 体验"
-                       : `需 ≥${t.vram}GB，当前 ${p.vram}GB 不足`;
+      rank += 2;
+      why += p.vram===0 ? "；需显卡，无卡可云端体验"
+                        : `；需≥${t.vram}GB(当前${p.vram}GB)`;
     }
-    // 商用场景：高风险许可降级并附警示
+    // 商用场景：高风险许可附警示
     if(p.comm==="yes" && RISK[t.lic]){
-      rank += 4;
-      why = (why?why+"；":"") + RISK[t.lic];
+      rank += 3;
+      why += "；" + RISK[t.lic];
     }
-    // 目标高度契合的 top 项再提前
-    if(t.roles.some(r=>p.goals.includes(r)) && t.tier==="top") rank -= 1;
-    return {...t, rank, why};
+    return {...t, rank, q, why};
   }).sort((a,b)=>a.rank-b.rank);
 }
 
@@ -425,8 +532,9 @@ function buildPackage(p){
   L.push("### 负面提示词","", "```text", pk.neg, "```","");
   L.push("### 三视图 / 重建基准图规格","", "```text", pk.tri, "```","");
   L.push("### 参数建议","", pk.params,"");
-  L.push("## 3. 工具链 · 同功能优中选优","");
-  L.push("| 环节 | 首选 | 备选 | 判断依据 |","|---|---|---|---|");
+  L.push("## 3. 工具链 · 效果优先（性能仅作参考）","");
+  L.push("> 排序以产出质量为主，显存/性能仅标注不主导。每个推荐位附「为什么」一句话。","");
+  L.push("| 环节 | 首选（为什么） | 备选（为什么） |","|---|---|---|");
   const chosen=[], downgraded=[];
   for(const grp of GROUPS){
     const ranked=rankTools(grp,p);
@@ -435,8 +543,11 @@ function buildPackage(p){
     const first=pool[0], alts=pool.slice(1,3);
     chosen.push(...pool);
     for(const t of ranked) if(t.why && applicable(t,p)) downgraded.push({n:t.n,why:t.why});
-    L.push(`| ${grp.name} | [${first.n}](${first.u}) | ${alts.map(t=>`[${t.n}](${t.u})`).join(" / ")||"—"}`+
-           ` | ${esc(first.note)}${first.why?"；"+esc(first.why):""} |`);
+    const why1 = (first.note||"").split("。")[0] + "。";
+    const whyAlt = alts.map(t=>`${t.n}：${(t.note||"").split("。")[0]}。`).join(" ");
+    L.push(`| ${grp.name} | **[${first.n}](${first.u})** — ${esc(why1)}`+
+           ` | ${alts.map(t=>`[${t.n}](${t.u})`).join(" / ")||"—"}`+
+           `${whyAlt?"<br>"+esc(whyAlt):""} |`);
   }
   if(downgraded.length){
     L.push("","**适配提示（下列工具已降级，别直接开工）**","");
@@ -483,14 +594,21 @@ function renderTools(term){
     count+=list.length;
     return `<div class="group"><h3><span class="dot" style="background:${grp.color}"></span>${esc(grp.name)}`+
       `<span class="cnt">${list.length} 个</span></h3><div class="tools">`+
-      list.map(t=>`<div class="tool">
+      list.map(t=>{
+        const bid=T2B[t.n], st=bid?toolStatus[bid]:null;
+        const localBadge = st ? (st.installed
+          ? '<span class="badge local">本机已装</span>'
+          : '<span class="badge miss">本机未装</span>') : '';
+        return `<div class="tool">
         <div class="tn"><a href="${t.u}" target="_blank" rel="noopener noreferrer">${esc(t.n)}</a>
-        <span class="badge ${t.tier}">${TIER_LABEL[t.tier]}</span></div>
+        <span class="badge ${t.tier}">${TIER_LABEL[t.tier]}</span>${localBadge}${toolBtn(t.n)}</div>
         <div class="meta">${esc(t.s)}　·　${esc(t.lic)}${t.vram?"　·　≥"+t.vram+"GB":""}</div>
-        <div class="note">${esc(t.note)}</div></div>`).join("")+
+        <div class="note">${esc(t.note)}</div></div>`;
+      }).join("")+
       `</div></div>`;
   }).join("") || `<p>没有匹配的工具，换个关键词试试。</p>`;
   $("filter-status").textContent = `匹配 ${count} 个工具`;
+  bindToolBtns($("toolList"));
 }
 
 /* ---------------------------------------------------------------- 本地留存 */
@@ -505,7 +623,7 @@ function renderHist(){
     : `<ul><li>暂无留存记录。</li></ul>`;
   $("hist").querySelectorAll(".load").forEach(b=>b.addEventListener("click",()=>{
     const h=getHist()[+b.dataset.i]; if(!h)return;
-    $("output").textContent=h.text; last={text:h.text,prompt:h.prompt,name:h.name};
+    $("output").textContent=h.text; last={text:h.text,prompt:h.prompt,name:h.name}; renderExec(null);
     ["copy","copyPrompt","download","save"].forEach(id=>$(id).disabled=false);
     setStatus($("outStatus"),`已载入：${h.name}`);
   }));
@@ -513,6 +631,41 @@ function renderHist(){
     const a2=getHist(); a2.splice(+b.dataset.i,1); setHist(a2); renderHist();
     setStatus($("outStatus"),"已删除该留存记录。");
   }));
+}
+
+
+/* ---------------------------------------------------------------- 执行台：任务包直接流入 */
+function renderExec(p){
+  if(!p){$("execEmpty").style.display='block';$("execStages").innerHTML='';return;}
+  $("execEmpty").style.display='none';
+  const g=new Set(p.goals||[]);
+  const pk=promptPack(p);
+  // 依据目标组装阶段，每阶段带工具按钮 + 对应提示词片段
+  const stages=[];
+  stages.push({title:'阶段 0 · 起稿与设定', tools:['Krita','Krita AI Diffusion'], pt:pk.pos});
+  if(g.has('triview')||g.has('to3d')||g.has('print'))
+    stages.push({title:'阶段 1 · 三视图 / 重建基准图', tools:['ComfyUI','ControlNet'], pt:pk.tri});
+  if(g.has('to3d'))
+    stages.push({title:'阶段 2 · 图生 3D（效果优先）', tools:['TRELLIS / TRELLIS.2','Hunyuan3D 2.0','TripoSR'], pt:pk.params});
+  if(g.has('texture'))
+    stages.push({title:'阶段 2b · PBR 贴图', tools:['ArmorPaint','Blender'], pt:'在模型表面绘制 PBR，检查 UV 与法线。'});
+  if(g.has('cad'))
+    stages.push({title:'阶段 2c · 参数化零件', tools:['FreeCAD','OpenSCAD','CadQuery'], pt:'参数化建模后导出 STL 与角色网格合体。'});
+  if(g.has('print'))
+    stages.push({title:'阶段 3 · 修模与切片', tools:['Blender','MeshLab','trimesh','OrcaSlicer','UVtools'], pt:pk.params});
+  if(g.has('vrm'))
+    stages.push({title:'阶段 3b · VRM 导出与驱动', tools:['VRM Add-on for Blender','VSeeFace'], pt:'Blender 导出 VRM 1.0，网页验证后面捕驱动。'});
+  if(g.has('pixel'))
+    stages.push({title:'阶段 1b · 像素 / 动画', tools:['Aseprite','OpenToonz'], pt:pk.pos});
+  $("execStages").innerHTML=stages.map(sg=>`
+    <div class="stage"><h4 aria-level="3">${esc(sg.title)}</h4>
+      <div class="tools">${sg.tools.map(n=>{
+        const t=GROUPS.flatMap(g=>g.tools).find(x=>x.n===n);
+        return `<span class="tag">${esc(n)}</span>${toolBtn(n)}`+(t?`<span style="flex-basis:100%;font-size:11px;color:var(--dim)">↳ ${esc((t.note||'').split('。')[0])}</span>`:'');
+      }).join('')}</div>
+      <div class="pt">${esc(sg.pt)}</div>
+    </div>`).join('');
+  bindToolBtns($("execStages"));
 }
 
 /* ---------------------------------------------------------------- 交互 */
@@ -542,8 +695,9 @@ $("gen").addEventListener("click",()=>{
   const p=profile();
   if(!p.proj&&!p.subject){setStatus($("status"),"请至少填写项目名称或角色主体。",true);return;}
   const pkg=buildPackage(p);
-  last={text:pkg.text,prompt:pkg.prompt,name:p.proj||p.subject||"创作任务包"};
+  last={text:pkg.text,prompt:pkg.prompt,name:p.proj||p.subject||"创作任务包",p:p};
   $("output").textContent=pkg.text;
+  renderExec(p);
   ["copy","copyPrompt","download","save"].forEach(id=>$(id).disabled=false);
   setStatus($("status"),`已生成：${p.goals.length} 个目标、${GROUPS.reduce((n,g)=>n+g.tools.length,0)} 个工具纳入索引。`);
   setStatus($("outStatus"),"任务包已就绪，可复制 / 导出 / 保存。");
@@ -566,7 +720,11 @@ $("save").addEventListener("click",()=>{
 $("print").addEventListener("click",()=>window.print());
 $("q").addEventListener("input",e=>renderTools(e.target.value));
 
-buildGoals();renderTools("");renderHist();
+buildGoals();renderHist();detectBridge();
+$("bridgeRefresh").onclick=detectBridge;
+$("bridgeStart").onclick=()=>{
+  setStatus($("outStatus"),'请在文件夹里双击「快捷方式工具/start-tool-bridge.ps1」选择用 PowerShell 运行，然后回来点刷新。');
+};
 </script>
 </body>
 </html>
