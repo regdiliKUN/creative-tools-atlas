@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.6.1)
+"""创作工具星图 · 自动化质量自检套件 (v1.6.2)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.6.1"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v1.6.2"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -201,7 +201,14 @@ def check_studio():
     s = (BASE / "studio.html").read_text(encoding="utf-8")
     tools = len(re.findall(r'\{n:"', s))
     groups = len(re.findall(r'\{id:"[^"]+", name:"', s))
+    workflows = len(re.findall(r'\n    id: "', s))
+    stages = len(re.findall(r'\n        title: "', s))
     checks = {
+        "工作流≥9": workflows >= 9,
+        "支线阶段≥30": stages >= 30,
+        "工作流选择器": 'id="wfGrid"' in s and 'id="wfBranches"' in s,
+        "上手引导": 'guide' in s and 'branch-cta' in s,
+        "效果优先保留": 'QUALITY' in s and '效果优先' in s,
         "工具覆盖≥50": tools >= 50,
         "环节≥7": groups >= 7,
         "生成器": all(k in s for k in ("buildPackage", "promptPack", "steps", "rankTools")),
@@ -211,7 +218,7 @@ def check_studio():
     }
     bad = [k for k, v in checks.items() if not v]
     check("工具/创作工坊", not bad,
-          f"{tools} 工具 / {groups} 环节" if not bad else "失败:" + ",".join(bad))
+          f"{workflows} 工作流 / {stages} 阶段 / {tools} 工具" if not bad else "失败:" + ",".join(bad))
 
     home = (BASE / "index.html").read_text(encoding="utf-8")
     check("导航/工坊入口", 'href="studio.html"' in home, "首页已接入" if 'href="studio.html"' in home else "首页无入口")

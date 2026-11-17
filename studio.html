@@ -105,6 +105,74 @@
     border-left:2px solid var(--ai);padding-left:10px;margin-top:8px}
   .badge.local{color:#0b0e17;background:var(--model);border-color:transparent;font-weight:700}
   .badge.miss{color:var(--warn);border-color:rgba(255,184,107,.4)}
+  /* 工作流选择器 */
+  .wf-intro{color:var(--muted);font-size:13.6px;margin:0 0 16px;max-width:820px}
+  .wf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 8px}
+  .wf-card{position:relative;border:1px solid var(--line);border-radius:14px;padding:15px 15px 13px;
+    cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.03),transparent);transition:.16s;overflow:hidden}
+  .wf-card:hover{border-color:rgba(255,255,255,.32);transform:translateY(-2px)}
+  .wf-card::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--wfc,var(--ai));opacity:.55}
+  .wf-card.on{border-color:var(--wfc,var(--ai));background:linear-gradient(160deg,rgba(183,148,255,.12),rgba(255,255,255,.02));
+    box-shadow:0 0 0 1px var(--wfc,var(--ai)) inset}
+  .wf-card .wf-ic{font-size:19px;color:var(--wfc,var(--ai));line-height:1}
+  .wf-card .wf-lb{font-size:14px;font-weight:700;margin:8px 0 4px;color:var(--text)}
+  .wf-card .wf-tg{font-size:11.5px;color:var(--dim);line-height:1.45;min-height:32px}
+  .wf-card .wf-n{position:absolute;right:11px;top:10px;font-size:10px;color:var(--dim);
+    border:1px solid var(--line);border-radius:20px;padding:1px 7px}
+  .wf-card.on .wf-n{color:#0b0e17;background:var(--wfc,var(--ai));border-color:transparent;font-weight:700}
+  /* 支线面板 */
+  .branch{margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    background:linear-gradient(165deg,var(--panel),rgba(17,22,37,.6))}
+  .branch-hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .branch-hd .bi{font-size:24px;color:var(--bfc,var(--ai))}
+  .branch-hd h3{margin:0;font-size:18px;color:var(--text)}
+  .branch-hd .bt{font-size:12px;color:var(--dim);margin-top:2px}
+  .branch-hd .bswitch{margin-left:auto;font-size:12px;color:var(--dim);cursor:pointer;
+    border:1px solid var(--line);border-radius:8px;padding:5px 11px;background:transparent}
+  .branch-hd .bswitch:hover{border-color:rgba(255,255,255,.3);color:var(--text)}
+  .branch-body{padding:18px 20px 20px}
+  .branch-body .intro{color:var(--muted);font-size:13.2px;line-height:1.7;margin:0 0 18px;
+    padding:12px 14px;border-left:3px solid var(--bfc,var(--ai));background:rgba(255,255,255,.02);border-radius:0 8px 8px 0}
+  .flow-step{display:grid;grid-template-columns:30px 1fr;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .flow-step:last-of-type{border-bottom:0}
+  .flow-step .sn{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#0b0e17;background:var(--bfc,var(--ai))}
+  .flow-step .sh{font-size:13.8px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .flow-step .si{font-size:12.2px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+  .flow-step .stools{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .flow-step .stools .tag{background:rgba(255,255,255,.05);color:var(--text);border-color:var(--line)}
+  .branch-tips{margin-top:16px;border:1px dashed var(--line);border-radius:10px;padding:12px 16px}
+  .branch-tips b{font-size:12px;color:var(--muted)}
+  .branch-tips ul{margin:7px 0 0;padding-left:18px}
+  .branch-tips li{font-size:12.2px;color:var(--muted);margin:3px 0}
+  /* 折叠：其他工具 / 通用区 */
+  details.fold{border:1px solid var(--line);border-radius:12px;margin-top:14px;background:rgba(255,255,255,.01)}
+  details.fold>summary{cursor:pointer;padding:12px 16px;font-size:13px;color:var(--muted);list-style:none;
+    display:flex;align-items:center;gap:8px;user-select:none}
+  details.fold>summary::-webkit-details-marker{display:none}
+  details.fold>summary::before{content:"▸";color:var(--ai);font-size:12px;transition:transform .15s}
+  details.fold[open]>summary::before{transform:rotate(90deg)}
+  details.fold>summary:hover{color:var(--text)}
+  details.fold .fold-body{padding:0 16px 16px}
+  /* 支线底部 CTA：缩短操作路径 */
+  .branch-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px;
+    padding:12px 14px;border-radius:10px;background:rgba(183,148,255,.08);border:1px solid rgba(183,148,255,.22)}
+  .branch-cta .ctatx{font-size:12.2px;color:var(--muted);flex:1;min-width:180px}
+  .branch-cta button{padding:8px 15px;font-size:12.5px}
+  .branch-cta button.quick{background:linear-gradient(95deg,var(--ai),#8f7bff);border-color:transparent;color:#0b0e17;font-weight:700}
+  /* 顶部上手引导条 */
+  .guide{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:1px solid var(--line);
+    border-radius:12px;padding:11px 16px;margin:0 0 20px;font-size:12.3px;color:var(--muted);
+    background:rgba(95,208,230,.05)}
+  .guide b{color:var(--model)}
+  .guide .step{display:inline-flex;align-items:center;gap:6px}
+  .guide .step i{font-style:normal;width:19px;height:19px;border-radius:50%;background:var(--model);color:#0b0e17;
+    font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  /* 空态引导 */
+  .wf-empty{border:1px dashed var(--line);border-radius:14px;padding:24px;text-align:center;color:var(--dim);font-size:13px}
+  .wf-empty .big{font-size:26px;color:var(--ai);display:block;margin-bottom:8px}
+  @media(max-width:900px){.wf-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}.wf-grid{grid-template-columns:1fr}}
   @media(max-width:720px){.form-grid{grid-template-columns:1fr}.wrap{padding:34px 16px 80px}}
   @media print{
     body{color-scheme:light;background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact}
@@ -120,7 +188,7 @@
 <body>
 <div class="wrap" role="main" aria-label="创作工坊：生成创作任务包">
 
-  <div class="kicker">Production Studio · v1.6.1</div>
+  <div class="kicker">Production Studio · v1.6.2</div>
   <h1>创作<span class="g">工坊</span></h1>
   <p class="lede">把星图里的工具真正用起来：填一次需求，产出一份能直接拿去干活的<strong>创作任务包</strong>——提示词、工具链（同功能优中选优）、执行清单、许可证警示，可复制、可导出、可本地留存。</p>
   <div class="ver">纯本地运行 · 不上传任何输入 · 数据口径 2026-11-16 快照 · 工具链接仅在点击时访问网络</div>
@@ -131,71 +199,79 @@
     <button id="bridgeRefresh">刷新状态</button>
   </div>
 
-  <h2 id="sec-form">① 填需求</h2>
-  <div class="panel">
-    <div class="form-grid">
-      <div class="field">
-        <label for="proj">项目名称 <span class="hint">用于任务包标题与导出文件名</span></label>
-        <input type="text" id="proj" placeholder="例：森林守卫·角色设定" maxlength="60">
-      </div>
-      <div class="field">
-        <label for="subject">角色 / 主体 <span class="hint">名称或一句话身份</span></label>
-        <input type="text" id="subject" placeholder="例：一位披苔藓斗篷的森林守卫" maxlength="120">
-      </div>
-      <div class="field full">
-        <label>创作目标 <span class="hint">可多选，工具链会据此串起对应环节</span></label>
-        <div class="choices" id="goals"></div>
-      </div>
-      <div class="field">
-        <label for="style">视觉风格</label>
-        <select id="style">
-          <option value="干净赛璐璐平涂">干净赛璐璐平涂</option>
-          <option value="厚涂概念设定">厚涂概念设定</option>
-          <option value="日系插画">日系插画</option>
-          <option value="写实 PBR">写实 PBR</option>
-          <option value="低多边形 / 风格化">低多边形 / 风格化</option>
-          <option value="像素风">像素风</option>
-          <option value="水彩 / 手绘">水彩 / 手绘</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="vram">显卡显存 <span class="hint">决定图生 3D 模型档位</span></label>
-        <select id="vram">
-          <option value="0">无本地卡 / 只用云端</option>
-          <option value="6">6 GB（入门）</option>
-          <option value="12" selected>12 GB（主流）</option>
-          <option value="24">24 GB（进阶）</option>
-          <option value="29">29 GB+（充足）</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="usage">用途 / 交付物</label>
-        <select id="usage">
-          <option value="个人练习">个人练习</option>
-          <option value="内部项目">公司内部项目</option>
-          <option value="作品集展示">作品集展示</option>
-          <option value="商业售卖 / 周边">商业售卖 / 周边</option>
-          <option value="游戏 / 引擎资产">游戏 / 引擎资产</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="comm">是否需要商用</label>
-        <select id="comm">
-          <option value="no">否（自用 / 学习）</option>
-          <option value="yes">是（会分发或售卖）</option>
-        </select>
-      </div>
-      <div class="field full">
-        <label for="extra">补充特征 <span class="hint">选填：配色、道具、姿态、禁止元素等，会写进提示词</span></label>
-        <textarea id="extra" placeholder="例：主色墨绿与暖橙，持木质长杖，站姿，不要武器发光、不要文字水印" maxlength="500"></textarea>
-      </div>
-    </div>
-    <div class="btns">
-      <button class="primary" id="gen">生成创作任务包</button>
-      <button id="clear">清空表单</button>
-    </div>
-    <div class="status" id="status" role="status" aria-live="polite"></div>
+  <h2 id="sec-wf">① 选工作流 · 一条支线直达目标</h2>
+  <p class="wf-intro">先选你要做的事，页面会切成对应的独立支线——只显示这条工作流需要的工具、步骤和提示，无关工具收进底部。想同时做多件事？可以多选，支线会依次列出。</p>
+  <div class="guide" role="note" aria-label="三步上手">
+    <span class="step"><i>1</i><b>选工作流</b></span>
+    <span class="step"><i>2</i>点工具「启动」开工（首次用请启工具桥）</span>
+    <span class="step"><i>3</i>填参数 → 生成任务包 → 执行台直接接着做</span>
   </div>
+  <div class="wf-grid" id="wfGrid" role="group" aria-label="选择工作流"></div>
+  <div id="wfBranches"></div>
+
+  <details class="fold" id="paramsFold">
+    <summary>项目参数与补充设定（选填 · 用于生成任务包与提示词）</summary>
+    <div class="fold-body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="proj">项目名称 <span class="hint">用于任务包标题与导出文件名</span></label>
+          <input type="text" id="proj" placeholder="例：森林守卫·角色设定" maxlength="60">
+        </div>
+        <div class="field">
+          <label for="subject">角色 / 主体 <span class="hint">名称或一句话身份</span></label>
+          <input type="text" id="subject" placeholder="例：一位披苔藓斗篷的森林守卫" maxlength="120">
+        </div>
+        <div class="field">
+          <label for="style">视觉风格</label>
+          <select id="style">
+            <option value="干净赛璐璐平涂">干净赛璐璐平涂</option>
+            <option value="厚涂概念设定">厚涂概念设定</option>
+            <option value="日系插画">日系插画</option>
+            <option value="写实 PBR">写实 PBR</option>
+            <option value="低多边形 / 风格化">低多边形 / 风格化</option>
+            <option value="像素风">像素风</option>
+            <option value="水彩 / 手绘">水彩 / 手绘</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="vram">显卡显存 <span class="hint">仅作参考，排序仍以效果优先</span></label>
+          <select id="vram">
+            <option value="0">无本地卡 / 只用云端</option>
+            <option value="6">6 GB（入门）</option>
+            <option value="12" selected>12 GB（主流）</option>
+            <option value="24">24 GB（进阶）</option>
+            <option value="29">29 GB+（充足）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="usage">用途 / 交付物</label>
+          <select id="usage">
+            <option value="个人练习">个人练习</option>
+            <option value="内部项目">公司内部项目</option>
+            <option value="作品集展示">作品集展示</option>
+            <option value="商业售卖 / 周边">商业售卖 / 周边</option>
+            <option value="游戏 / 引擎资产">游戏 / 引擎资产</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="comm">是否需要商用</label>
+          <select id="comm">
+            <option value="no">否（自用 / 学习）</option>
+            <option value="yes">是（会分发或售卖）</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="extra">补充特征 <span class="hint">选填：配色、道具、姿态、禁止元素等，会写进提示词</span></label>
+          <textarea id="extra" placeholder="例：主色墨绿与暖橙，持木质长杖，站姿，不要武器发光、不要文字水印" maxlength="500"></textarea>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="gen">生成创作任务包</button>
+        <button id="clear">清空表单</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+  </details>
 
   <h2 id="sec-out">② 拿产出</h2>
   <div class="panel">
@@ -217,12 +293,17 @@
   <div class="panel exec" id="execPanel"><p id="execEmpty">尚未生成任务包。生成后这里会按阶段列出可点击的工具与对应提示词。</p><div id="execStages"></div></div>
 
   <h2 id="sec-tools">④ 工具全览 · 效果优先</h2>
-  <p>星图里介绍到的工具全部编入下方 7 个生产环节。同功能重复的一律优中选优：<span class="badge top">首选</span> 是可直接开工的那个，<span class="badge alt">备选</span> 是特定条件下的更优解，其余标注为上一代 / 研究 / 原型，避免踩坑。</p>
-  <div class="filters">
-    <input class="search" type="search" id="q" placeholder="筛选工具 / 关键词…" aria-label="筛选工具">
-    <span class="sr" id="filter-status" role="status" aria-live="polite"></span>
-  </div>
-  <div id="toolList"></div>
+  <details class="fold" id="toolsFold">
+    <summary>展开全部 52 个工具（按 7 大环节 · 效果优先排序）—— 找不到想要的工具时来这里探索</summary>
+    <div class="fold-body">
+      <p>星图里介绍到的工具全部编入下方 7 个生产环节。同功能重复的一律优中选优：<span class="badge top">首选</span> 是可直接开工的那个，<span class="badge alt">备选</span> 是特定条件下的更优解，其余标注为上一代 / 研究 / 原型，避免踩坑。</p>
+      <div class="filters">
+        <input class="search" type="search" id="q" placeholder="筛选工具 / 关键词…" aria-label="筛选工具">
+        <span class="sr" id="filter-status" role="status" aria-live="polite"></span>
+      </div>
+      <div id="toolList"></div>
+    </div>
+  </details>
 
   <h2 id="sec-hist">⑤ 本地留存</h2>
   <p>任务包保存在浏览器 localStorage，只在这台电脑上，不上传。可随时载入、删除。</p>
@@ -238,6 +319,337 @@
 
 <script>
 "use strict";
+/* ---------------------------------------------------------------- 工作流支线定义 */
+/* 创作工坊 · 工作流支线定义 (v1.6.2)
+   每条工作流 = 一个独立目标，含专属工具(上下游顺序)、步骤、操作提示、输入项。
+   设计原则：选需求 → 进支线 → 只看相关工具 → 按序开工。
+   全部工具名严格复用 studio.html GROUPS 里的 n 字段。 */
+
+
+const WORKFLOWS = [
+  {
+    id: "character",
+    icon: "✦",
+    label: "角色立绘与设定图",
+    tagline: "从一句话设定到可交付的角色美术稿",
+    color: "var(--paint)",
+    goalIds: ["character"],
+    intro: "把角色设定变成干净、可复用的立绘与设定稿。核心是「先定基底、锁一致性、再出变体」——Krita 里起稿，AI 插件按选区/线稿生成，锁定 Seed 保证同一个角色不跑偏。",
+    // 上下游顺序：起稿 → 生成 → 一致性 → 精修 → 交付
+    stages: [
+      {
+        title: "起稿与设定基底",
+        hint: "在 Krita 里画出角色草图与配色，保留分层源文件；这一步决定后面 AI 生成的骨架。",
+        tools: ["Krita"]
+      },
+      {
+        title: "AI 辅助生成与局部重绘",
+        hint: "装 Krita AI Diffusion 插件，用选区生成/Live Painting 反复迭代；首次启动 Krita 加载笔刷资源可能要 1–3 分钟，属正常。",
+        tools: ["Krita AI Diffusion", "ComfyUI"]
+      },
+      {
+        title: "锁定角色一致性",
+        hint: "满意基底后锁 Seed，只调 CFG/Denoise 出变体；系列角色可叠加 IP-Adapter 或自训 LoRA。",
+        tools: ["ControlNet"]
+      },
+      {
+        title: "精修与交付",
+        hint: "抠图去底、FaceDetailer 修脸，输出干净 PNG；商用前核对模型权重与许可证。",
+        tools: ["excalidraw"]
+      }
+    ],
+    tips: [
+      "首选 Krita + AI 插件起步，别一上来搭 ComfyUI 节点图。",
+      "6GB 显存能跑；512² 小图先验证，再上 1024²。",
+      "保留分层 .kra 源文件，是质量也是商用合规证据。"
+    ],
+    promptKind: "character"
+  },
+  {
+    id: "triview",
+    icon: "◫",
+    label: "三视图与基准图",
+    tagline: "产出尺寸一致、视角固定的正/侧/后三视图",
+    color: "var(--ai)",
+    goalIds: ["triview"],
+    intro: "三视图是「美术设定图」和「重建输入图」的分水岭。诀窍是：不换提示词，只换控制图（骨架/深度/Canny）来切视角，强制三个视角共用同一套人体比例。",
+    stages: [
+      {
+        title: "备好正面基底",
+        hint: "先出一张确认过的正面高清设定图，作为三视图的基准。",
+        tools: ["Krita", "Krita AI Diffusion"]
+      },
+      {
+        title: "控制图锁定视角",
+        hint: "预置标准三视图骨架图/深度图作条件输入；换视角只替换控制图，不换提示词。",
+        tools: ["ControlNet", "openpose"]
+      },
+      {
+        title: "批量出三视图",
+        hint: "在 ComfyUI 里跑三视图工作流，锁 Seed、固定尺寸与顺序（正/侧/后）。",
+        tools: ["ComfyUI", "zero123plus"]
+      },
+      {
+        title: "一致性校验",
+        hint: "检查比例、服装细节在三个视角是否一致；不一致就回到控制图微调。",
+        tools: ["三视图控制图", "锁 Seed 做变体"]
+      }
+    ],
+    tips: [
+      "正/侧/后三张尺寸必须一致、顺序固定，否则下游重建会错位。",
+      "白底、平光、单对象；极端角度会漂，优先 3/4 视角。",
+      "IP-Adapter 权重 0.6–0.8：>0.8 僵硬，<0.5 锁不住。"
+    ],
+    promptKind: "triview"
+  },
+  {
+    id: "rebuild",
+    icon: "◇",
+    label: "基建重建基准图",
+    tagline: "把三视图净化成能喂给图生 3D 模型的干净输入",
+    color: "var(--model)",
+    goalIds: ["to3d","triview"],
+    intro: "这是最容易被跳过、却最要命的一环：AI 直接吐出的图带水印、脏背景、多光源，喂进重建模型等于埋雷。这一步专门把图「洗干净」，产出符合 8 条硬规则的重建基准图。",
+    stages: [
+      {
+        title: "准备干净输入",
+        hint: "白底/透明底、平光、单对象、1024² 以上；复杂角色补正/侧/后三视图。",
+        tools: ["Krita"]
+      },
+      {
+        title: "抠图与净化",
+        hint: "Rembg 抠图、去水印、ColorMatch、FaceDetailer——脏数据进重建等于埋雷，这步不能省。",
+        tools: ["抠图 / 净化", "ComfyUI"]
+      },
+      {
+        title: "按 8 条硬规则校验",
+        hint: "逐条核对重建基准图规格：单对象、平光、视角、尺寸一致、顺序固定。",
+        tools: ["三视图控制图"]
+      },
+      {
+        title: "进入重建（下一支线）",
+        hint: "净化后的干净 PNG 即可交给「图生 3D 模型」工作流；这里只负责把输入端做到位。",
+        tools: ["Blender"]
+      }
+    ],
+    tips: [
+      "输出必须是干净 PNG，不要 JPG（压缩伪影伤害重建）。",
+      "单对象、不遮挡、无文字水印——这三样是重建质量的命门。",
+      "想直接看重建效果？完成本支线后切换到「图生 3D 模型」支线。"
+    ],
+    promptKind: "triview"
+  },
+  {
+    id: "to3d",
+    icon: "◈",
+    label: "图生 3D 模型",
+    tagline: "从干净图到带纹理的 3D 网格（效果优先）",
+    color: "var(--ai)",
+    goalIds: ["to3d"],
+    intro: "效果优先：TRELLIS.2 产出质量最高（资产级、MIT），Hunyuan3D 系列 PBR 材质强，TripoSR 只作轻量验证。RTX 4090 24GB 跑 TRELLIS.2 没问题；权重需单独下载。",
+    stages: [
+      {
+        title: "选择生成模型",
+        hint: "按效果排序：TRELLIS.2（最好）→ Hunyuan3D-2.1（PBR）→ Hunyuan3D 2.0 → TripoSR（轻量验证）。",
+        tools: ["TRELLIS / TRELLIS.2", "Hunyuan3D-2.1", "TripoSR"]
+      },
+      {
+        title: "生成与导出",
+        hint: "把净化后的干净 PNG 送进模型，导出 GLB / OBJ；首次需下载模型权重（数 GB–十几 GB）。",
+        tools: ["ComfyUI"]
+      },
+      {
+        title: "拓扑与修模",
+        hint: "AI 网格多是三角面：instant-meshes 重四边面，MeshLab 清理，Blender 修漏面/非流形。",
+        tools: ["instant-meshes", "MeshLab", "Blender"]
+      },
+      {
+        title: "质量校验",
+        hint: "trimesh 脚本化检查网格完整性，确认可进入打印或 VRM 流程。",
+        tools: ["trimesh", "Assimp"]
+      }
+    ],
+    tips: [
+      "权重默认不随包下载——见「安装AI引擎说明.md」按体积自行获取。",
+      "显存被占用会 OOM：生成前确认 24GB 已释放。",
+      "商用优先 MIT 模型（TRELLIS/TripoSR）；Hunyuan3D 社区许可有地域条款。"
+    ],
+    promptKind: "to3d"
+  },
+  {
+    id: "print",
+    icon: "▲",
+    label: "手办与 3D 打印",
+    tagline: "从网格到可打印、可上色的实体手办",
+    color: "var(--figure)",
+    goalIds: ["print"],
+    intro: "最后一公里：AI 网格通常不能直接打印（漏面、非流形、薄壁、空腔）。先修模，再切片，先打小样验证比例与壁厚，别一上来就打大模型。",
+    stages: [
+      {
+        title: "网格修复",
+        hint: "Blender 查漏面/非流形/薄壁/内部空腔，MeshLab 简化，trimesh 脚本化校验。",
+        tools: ["Blender", "MeshLab", "trimesh"]
+      },
+      {
+        title: "重拓扑与加厚",
+        hint: "instant-meshes 把三角面转规整四边面；薄壁处加厚，避免打印时断裂。",
+        tools: ["instant-meshes-2026"]
+      },
+      {
+        title: "切片设置",
+        hint: "FDM 用 OrcaSlicer（树状支撑），光固化用 UVtools；先打 30% 小样验证。",
+        tools: ["OrcaSlicer", "UVtools", "PrusaSlicer", "Cura"]
+      },
+      {
+        title: "上色与交付",
+        hint: "ArmorPaint 在模型表面绘 PBR 贴图；整理源文件与切片参数。",
+        tools: ["ArmorPaint"]
+      }
+    ],
+    tips: [
+      "别省修模：脏网格打出来就是废件，浪费几小时机时。",
+      "OrcaSlicer/UVtools 是 AGPL，做商品售卖前留意许可。",
+      "先打小样验证比例，再放大到成品尺寸。"
+    ],
+    promptKind: "print"
+  },
+  {
+    id: "vrm",
+    icon: "☺",
+    label: "VRM 与虚拟形象",
+    tagline: "把角色做成可驱动、可上架的 VRM 形象",
+    color: "var(--figure)",
+    goalIds: ["vrm"],
+    intro: "从角色网格到能说话、能动、能上架的虚拟形象。核心是 VRM 1.0 规范导出 + 骨骼/表情标准化，再做面捕驱动与网页展示。",
+    stages: [
+      {
+        title: "人体底模",
+        hint: "MakeHuman 滑杆生成带骨骼的基础人体，或沿用前面支线的角色网格。",
+        tools: ["MakeHuman", "Blender"]
+      },
+      {
+        title: "VRM 导出",
+        hint: "Blender + VRM Add-on 导出 VRM 0.x/1.0，规范 Humanoid 骨骼与表情。",
+        tools: ["VRM Add-on for Blender", "VRM 规范"]
+      },
+      {
+        title: "换装与转换",
+        hint: "CharacterStudio 浏览器内换装调色；MMD 资源用 VRMify 转 VRM。",
+        tools: ["CharacterStudio", "VRMify"]
+      },
+      {
+        title: "驱动与展示",
+        hint: "VSeeFace 面捕驱动；three-vrm / model-viewer 在网页展示形象。",
+        tools: ["VSeeFace", "three-vrm", "model-viewer"]
+      }
+    ],
+    tips: [
+      "导出前确认 VRM 1.0 规范，避免各平台兼容问题。",
+      "表情（BlendShape）命名要标准，否则面捕识别不到。",
+      "VRM 规范本身是公开标准，商用前留意模型来源授权。"
+    ],
+    promptKind: "character"
+  },
+  {
+    id: "pixel",
+    icon: "▦",
+    label: "像素与 2D 动画",
+    tagline: "像素画、逐帧动画与序列帧输出",
+    color: "var(--paint)",
+    goalIds: ["pixel"],
+    intro: "像素与动画是独立于 3D 的一条支线。Aseprite 管像素逐帧，OpenToonz 管完整 2D 动画（扫描、上色、摄影表、特效）。",
+    stages: [
+      {
+        title: "像素绘制",
+        hint: "Aseprite 图层/帧分离、洋葱皮、像素完美笔刷；注意官方二进制需购买。",
+        tools: ["Aseprite"]
+      },
+      {
+        title: "2D 动画",
+        hint: "OpenToonz 做扫描线稿、自动上色、摄影表、骨骼变形与特效渲染。",
+        tools: ["OpenToonz"]
+      },
+      {
+        title: "导出交付",
+        hint: "导出精灵表 / 序列帧，供游戏引擎或视频剪辑使用。",
+        tools: ["excalidraw"]
+      }
+    ],
+    tips: [
+      "Aseprite 是 EULA：源码可读但官方二进制需购买，商用务必合规。",
+      "像素画先定调色板（16/32 色），再动笔。",
+      "序列帧导出注意帧率与命名顺序。"
+    ],
+    promptKind: "pixel"
+  },
+  {
+    id: "cad",
+    icon: "⬡",
+    label: "参数化 CAD 零件",
+    tagline: "用参数/代码造可打印的硬表面零件",
+    color: "var(--model)",
+    goalIds: ["cad"],
+    intro: "硬表面、需要精确尺寸的零件走这条支线：FreeCAD（可视化参数化）、OpenSCAD（代码 CSG）、CadQuery（Python 工作流）三选一，改一个参数整件重算。",
+    stages: [
+      {
+        title: "参数化建模",
+        hint: "FreeCAD 约束草图+特征历史；或 OpenSCAD/CadQuery 用代码描述实体。",
+        tools: ["FreeCAD", "OpenSCAD", "CadQuery"]
+      },
+      {
+        title: "AI 辅助 CAD（可选）",
+        hint: "text-to-cad 给编码 Agent 用的 CAD 技能包，可快速起稿。",
+        tools: ["text-to-cad"]
+      },
+      {
+        title: "合体与导出",
+        hint: "导出的 STL 可与角色网格合体，再进打印支线。",
+        tools: ["Assimp", "glTF-Blender-IO"]
+      }
+    ],
+    tips: [
+      "三者按语言偏好二选一：FreeCAD 可视化、OpenSCAD 声明式、CadQuery 现代 Python。",
+      "参数化零件改尺寸不用重画，这是它相对手工建模的核心优势。",
+      "导出 STL 前检查壁厚与公差，避免打印装不上。"
+    ],
+    promptKind: "cad"
+  },
+  {
+    id: "texture",
+    icon: "◐",
+    label: "PBR 贴图与材质",
+    tagline: "在 3D 模型表面绘制与烘焙 PBR 材质",
+    color: "var(--model)",
+    goalIds: ["texture"],
+    intro: "贴图是「绘画」与「建模」之间的门。ArmorPaint 直接在模型表面绘 PBR，Blender 负责 UV 与烘焙，是这条支线的主力。",
+    stages: [
+      {
+        title: "表面绘制",
+        hint: "ArmorPaint 直接在 3D 模型表面绘制 PBR 贴图，实时预览。",
+        tools: ["ArmorPaint"]
+      },
+      {
+        title: "UV 与烘焙",
+        hint: "Blender 里检查 UV、烘焙法线/AO 贴图，确保引擎里正确显示。",
+        tools: ["Blender", "Krita AI Diffusion"]
+      },
+      {
+        title: "引擎接入",
+        hint: "glTF-Blender-IO 导出 GLB，three-vrm/model-viewer 做网页预览。",
+        tools: ["glTF-Blender-IO", "model-viewer"]
+      }
+    ],
+    tips: [
+      "PBR 三件套：BaseColor / Roughness / Normal，缺一影响质感。",
+      "贴图分辨率与 UV 布局先行，避免后面返工。",
+      "商用留意贴图素材来源与模型许可证。"
+    ],
+    promptKind: "texture"
+  }
+];
+
+
+
 /* ---------------------------------------------------------------- 数据底座
    全部工具来自包内两份报告。tier: top 首选 / alt 备选 / legacy 上一代
    / research 研究教学 / proto 原型(已被吸收) / spec 规范 / tech 技法
@@ -371,6 +783,7 @@ async function detectBridge(){
   if(bridgeOn) await loadToolStatus();
   else toolStatus={};
   renderTools($('q').value);
+  renderBranches();
   if(last && last.p) renderExec(last.p);
 }
 async function loadToolStatus(){
@@ -390,6 +803,7 @@ async function callBridge(action,id,btn){
     setStatus($('outStatus'),d.message||'完成',!d.ok);
     if(action==='install') await loadToolStatus();
     renderTools($('q').value);
+    renderBranches();
     if(last && last.p) renderExec(last.p);
   }catch(e){setStatus($('outStatus'),'调用失败：'+e.message,true);}
   finally{ if(btn){btn.disabled=false;btn.textContent=action==='launch'?'启动':'一键安装';} }
@@ -409,6 +823,10 @@ function bindToolBtns(root){
   (root||document).querySelectorAll('[data-install]').forEach(b=>b.onclick=()=>callBridge('install',b.dataset.install,b));
 }
 
+/* ---------------------------------------------------------------- 工作流状态 */
+let selectedWf = new Set();               // 当前选中的工作流 id
+function toolByName(n){ return GROUPS.flatMap(g=>g.tools).find(x=>x.n===n); }
+
 /* ---------------------------------------------------------------- 工具函数 */
 const $ = id => document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -418,15 +836,104 @@ function setStatus(el,msg,err){el.textContent=msg;el.classList.toggle("err",!!er
 
 /* ---------------------------------------------------------------- 表单 */
 function buildGoals(){
-  $("goals").innerHTML = GOALS.map(g=>
-    `<label class="chip"><input type="checkbox" value="${g.id}">${esc(g.label)}</label>`).join("");
-  $("goals").querySelectorAll("input").forEach(i=>i.addEventListener("change",()=>
-    i.closest(".chip").classList.toggle("on",i.checked)));
+  // 兼容：原 GOALS 仍用于任务包分类标签；界面改用 WORKFLOWS 选择器
+  $("wfGrid").innerHTML = WORKFLOWS.map((w,i)=>
+    `<div class="wf-card" data-wf="${w.id}" style="--wfc:${w.color}" role="button" tabindex="0"
+       aria-pressed="false">
+       <span class="wf-n">${i+1}</span>
+       <div class="wf-ic">${w.icon}</div>
+       <div class="wf-lb">${esc(w.label)}</div>
+       <div class="wf-tg">${esc(w.tagline)}</div>
+     </div>`).join("");
+  $("wfGrid").querySelectorAll(".wf-card").forEach(c=>{
+    const pick=()=>{ const id=c.dataset.wf;
+      if(selectedWf.has(id)) selectedWf.delete(id); else selectedWf.add(id);
+      renderWfSelect(); renderBranches();
+    };
+    c.addEventListener("click",pick);
+    c.addEventListener("keydown",e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});
+  });
+}
+function renderWfSelect(){
+  $("wfGrid").querySelectorAll(".wf-card").forEach(c=>{
+    const on=selectedWf.has(c.dataset.wf);
+    c.classList.toggle("on",on);
+    c.setAttribute("aria-pressed",on?"true":"false");
+    c.querySelector(".wf-n").textContent=on?"✓":(WORKFLOWS.findIndex(w=>w.id===c.dataset.wf)+1);
+  });
+}
+function renderBranches(){
+  const box=$("wfBranches");
+  if(!selectedWf.size){
+    box.innerHTML=`<div class="wf-empty"><span class="big">◎</span>上面选一条工作流，这里会出现它的专属支线：按顺序列出工具、操作提示和避坑要点。</div>`;
+    return;
+  }
+  box.innerHTML=WORKFLOWS.filter(w=>selectedWf.has(w.id)).map(w=>`
+    <div class="branch" style="--bfc:${w.color}" data-branch="${w.id}">
+      <div class="branch-hd"><div class="bi">${w.icon}</div>
+        <div><h3>${esc(w.label)}</h3><div class="bt">${esc(w.tagline)}</div></div>
+        <button class="bswitch" data-hide="${w.id}">收起支线</button>
+      </div>
+      <div class="branch-body">
+        <p class="intro">${esc(w.intro)}</p>
+        ${w.stages.map((sg,i)=>`
+          <div class="flow-step">
+            <div class="sn">${i+1}</div>
+            <div><div class="sh">${esc(sg.title)}</div>
+              <div class="si">${esc(sg.hint)}</div>
+              <div class="stools">${sg.tools.map(n=>{
+                const t=toolByName(n);
+                return `<span class="tag" title="${t?esc(t.note):''}">${esc(n)}</span>${toolBtn(n)}`;
+              }).join('')}</div>
+            </div>
+          </div>`).join('')}
+        <div class="branch-tips"><b>💡 这条支线的提示</b>
+          <ul>${w.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+        </div>
+        <details class="fold"><summary>本支线未用到、但相关的其他工具（按需探索）</summary>
+          <div class="fold-body">${relatedOthers(w)}</div>
+        </details>
+        <div class="branch-cta">
+          <span class="ctatx">要一份可复制、可导出的完整任务包？填几项参数即可生成。</span>
+          <button class="quick" data-make="${w.id}">用这条工作流生成任务包 →</button>
+        </div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll("[data-hide]").forEach(b=>b.onclick=()=>{
+    const el=box.querySelector(`[data-branch="${b.dataset.hide}"]`);
+    const body=el.querySelector(".branch-body");
+    const hidden=body.style.display==='none';
+    body.style.display=hidden?'':'none';
+    b.textContent=hidden?'收起支线':'展开支线';
+  });
+  bindToolBtns(box);
+  box.querySelectorAll("[data-make]").forEach(b=>b.onclick=()=>{
+    $("paramsFold").open=true;                 // 展开参数区
+    if(!$("proj").value && !$("subject").value){ // 用工作流标签预填，省去从零输入
+      $("proj").value=WORKFLOWS.find(x=>x.id===b.dataset.make).label+" · 任务";
+    }
+    $("paramsFold").scrollIntoView({behavior:'smooth',block:'start'});
+    setStatus($("status"),"已展开参数区，填好主体后点「生成创作任务包」。");
+  });
+}
+function relatedOthers(w){
+  const used=new Set(w.stages.flatMap(s=>s.tools));
+  const all=GROUPS.flatMap(g=>g.tools);
+  const rel=all.filter(t=>!used.has(t.n) && t.roles.some(r=>(w.goalIds||[]).includes(r)));
+  const list=(rel.length?rel:all.filter(t=>!used.has(t.n)).slice(0,8));
+  return `<div class="tools">`+list.map(t=>`<div class="tool">
+    <div class="tn"><a href="${t.u}" target="_blank" rel="noopener noreferrer">${esc(t.n)}</a>
+    <span class="badge ${t.tier}">${TIER_LABEL[t.tier]}</span>${toolBtn(t.n)}</div>
+    <div class="note">${esc(t.note)}</div></div>`).join('')+`</div>`;
 }
 function profile(){
+  // 从选中的工作流映射出 goals（兼容任务包与执行台的原有逻辑）
+  const goals=[...new Set([...selectedWf].flatMap(id=>{
+    const w=WORKFLOWS.find(x=>x.id===id); return w?w.goalIds:[];
+  }))];
   return {
     proj:$("proj").value.trim(), subject:$("subject").value.trim(),
-    goals:[...$("goals").querySelectorAll("input:checked")].map(i=>i.value),
+    goals, workflows:[...selectedWf],
     style:$("style").value, vram:parseInt($("vram").value,10),
     usage:$("usage").value, comm:$("comm").value,
     extra:$("extra").value.trim()
@@ -525,6 +1032,10 @@ function buildPackage(p){
   L.push(`- 风格：${p.style}`);
   L.push(`- 用途：${p.usage}${p.comm==="yes"?"（商用：需核对许可）":"（非商用）"}`);
   L.push(`- 硬件：${p.vram===0?"无本地卡 / 走云端":p.vram+" GB 显存"}`);
+  if(p.workflows&&p.workflows.length){
+    const wfNames=p.workflows.map(id=>{const w=WORKFLOWS.find(x=>x.id===id);return w?w.label:id;});
+    L.push(`- 工作流：${wfNames.join(" / ")}`);
+  }
   if(p.extra) L.push(`- 补充：${p.extra}`);
   L.push("","## 2. 提示词包（可直接粘贴）","");
   const pk=promptPack(p);
@@ -532,7 +1043,22 @@ function buildPackage(p){
   L.push("### 负面提示词","", "```text", pk.neg, "```","");
   L.push("### 三视图 / 重建基准图规格","", "```text", pk.tri, "```","");
   L.push("### 参数建议","", pk.params,"");
-  L.push("## 3. 工具链 · 效果优先（性能仅作参考）","");
+  // 新增：按工作流的分阶段执行路径（任务包自带，无需跳回页面）
+  if(p.workflows&&p.workflows.length){
+    L.push("## 3. 工作流执行路径（按序开工）","");
+    WORKFLOWS.filter(w=>p.workflows.includes(w.id)).forEach(w=>{
+      L.push(`### ${w.icon} ${w.label}`,"",w.intro,"");
+      w.stages.forEach((sg,i)=>{
+        const names=sg.tools.join(" → ");
+        L.push(`${i+1}. **${sg.title}**：${sg.hint}`);
+        L.push(`   - 工具：${names}`);
+      });
+      L.push("","   提示：","");
+      w.tips.forEach(t=>L.push(`   - ${t}`));
+      L.push("");
+    });
+  }
+  L.push("## 4. 工具链 · 效果优先（性能仅作参考）","");
   L.push("> 排序以产出质量为主，显存/性能仅标注不主导。每个推荐位附「为什么」一句话。","");
   L.push("| 环节 | 首选（为什么） | 备选（为什么） |","|---|---|---|");
   const chosen=[], downgraded=[];
@@ -557,9 +1083,9 @@ function buildPackage(p){
       L.push(`- ${esc(d.n)}：${esc(d.why)}`);
     }
   }
-  L.push("","## 4. 执行清单","");
+  L.push("","## 5. 执行清单","");
   steps(p).forEach(s=>L.push(`- [ ] ${s}`));
-  L.push("","## 5. 许可证与避坑","");
+  L.push("","## 6. 许可证与避坑","");
   if(p.comm==="yes"){
     L.push("**商用模式：以下高风险项必须逐条确认**","");
     const seen=new Set();
@@ -576,7 +1102,7 @@ function buildPackage(p){
   L.push("- 高星 ≠ 还活着：ControlNet（34.1k ★）停在 2024-02，InstantMesh / Fooocus / A1111 也明显放缓；看 star 前先看 pushed_at。");
   L.push("- 仓库会搬家：ComfyUI 已迁 Comfy-Org，blender-mcp 更名 mcp-for-blender，OrcaSlicer 迁组织账号；Blender / Krita 在 GitHub 只是镜像。");
   L.push("- 最后一公里：AI 网格通常不能直接打印，漏面/非流形/薄壁/空腔必须靠 Blender + trimesh + UVtools 收尾。");
-  L.push("","## 6. 全部工具索引（星图收录，按需取用）","");
+  L.push("","## 7. 全部工具索引（星图收录，按需取用）","");
   for(const grp of GROUPS){
     L.push(`**${grp.name}**：` + grp.tools.map(t=>`[${t.n}](${t.u})`).join(" · "),"");
   }
@@ -640,7 +1166,24 @@ function renderExec(p){
   $("execEmpty").style.display='none';
   const g=new Set(p.goals||[]);
   const pk=promptPack(p);
-  // 依据目标组装阶段，每阶段带工具按钮 + 对应提示词片段
+  // 若选了工作流：执行台直接用工作流 stages（与支线一致），不再混用旧逻辑
+  if(p.workflows&&p.workflows.length){
+    const wss=WORKFLOWS.filter(w=>p.workflows.includes(w.id));
+    $("execStages").innerHTML=wss.map(w=>`
+      <div class="stage" style="border-left:3px solid ${w.color}">
+        <h4 aria-level="3">${w.icon} ${esc(w.label)}</h4>
+        ${w.stages.map((sg,i)=>`
+          <div style="margin:8px 0 12px 4px">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text)">${i+1}. ${esc(sg.title)}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin:3px 0 6px">${esc(sg.hint)}</div>
+            <div class="tools">${sg.tools.map(n=>`<span class="tag">${esc(n)}</span>${toolBtn(n)}`).join('')}</div>
+          </div>`).join('')}
+        <div class="pt">💡 ${w.tips.map(esc).join(' · ')}</div>
+      </div>`).join('');
+    bindToolBtns($("execStages"));
+    return;
+  }
+  // 兼容旧任务包（无 workflows 字段）：沿用原目标驱动逻辑
   const stages=[];
   stages.push({title:'阶段 0 · 起稿与设定', tools:['Krita','Krita AI Diffusion'], pt:pk.pos});
   if(g.has('triview')||g.has('to3d')||g.has('print'))
@@ -693,20 +1236,23 @@ function download(){
 
 $("gen").addEventListener("click",()=>{
   const p=profile();
-  if(!p.proj&&!p.subject){setStatus($("status"),"请至少填写项目名称或角色主体。",true);return;}
+  if(!selectedWf.size){setStatus($("status"),"请先在上方选一条工作流（可多选）。",true);return;}
+  if(!p.proj&&!p.subject){setStatus($("status"),"请在「项目参数」里至少填写项目名称或角色主体。",true);
+    $("paramsFold").open=true;return;}
   const pkg=buildPackage(p);
   last={text:pkg.text,prompt:pkg.prompt,name:p.proj||p.subject||"创作任务包",p:p};
   $("output").textContent=pkg.text;
   renderExec(p);
   ["copy","copyPrompt","download","save"].forEach(id=>$(id).disabled=false);
-  setStatus($("status"),`已生成：${p.goals.length} 个目标、${GROUPS.reduce((n,g)=>n+g.tools.length,0)} 个工具纳入索引。`);
+  setStatus($("status"),`已生成：${p.workflows.length} 条工作流、${p.goals.length} 个目标、${GROUPS.reduce((n,g)=>n+g.tools.length,0)} 个工具纳入索引。`);
   setStatus($("outStatus"),"任务包已就绪，可复制 / 导出 / 保存。");
 });
 $("clear").addEventListener("click",()=>{
   ["proj","subject","extra"].forEach(id=>$(id).value="");
   $("goals").querySelectorAll("input").forEach(i=>{i.checked=false;i.closest(".chip").classList.remove("on");});
   $("style").selectedIndex=0;$("vram").value="12";$("usage").selectedIndex=0;$("comm").selectedIndex=0;
-  setStatus($("status"),"表单已清空。");
+  selectedWf.clear(); renderWfSelect(); renderBranches(); renderExec(null);
+  setStatus($("status"),"表单与工作流已清空。");
 });
 $("copy").addEventListener("click",()=>last&&clip(last.text,"任务包已复制到剪贴板。"));
 $("copyPrompt").addEventListener("click",()=>last&&clip(last.prompt,"提示词包已复制到剪贴板。"));
@@ -720,7 +1266,7 @@ $("save").addEventListener("click",()=>{
 $("print").addEventListener("click",()=>window.print());
 $("q").addEventListener("input",e=>renderTools(e.target.value));
 
-buildGoals();renderHist();detectBridge();
+buildGoals();renderWfSelect();renderBranches();renderHist();detectBridge();
 $("bridgeRefresh").onclick=detectBridge;
 $("bridgeStart").onclick=()=>{
   setStatus($("outStatus"),'请在文件夹里双击「快捷方式工具/start-tool-bridge.ps1」选择用 PowerShell 运行，然后回来点刷新。');

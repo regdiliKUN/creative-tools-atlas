@@ -1,18 +1,18 @@
 # 创作工具星图 · 文件清单与校验基线
 
-版本：v1.6.1　生成日期：2026-11-17
+版本：v1.6.2　生成日期：2026-11-17
 
 | 文件 | 字节 | SHA-256（前16位） |
 |---|---:|---|
 | `创作工具星图.exe` | 1837065 | `64a3d61a81435a53…` |
-| `index.html` | 6397 | `2ca525faf9cb5393…` |
+| `index.html` | 6397 | `2df1ec9309a5b6ba…` |
 | `github-creative-tools-atlas.html` | 64997 | `12ba614f584d3c07…` |
 | `route-a-painter-workstation.html` | 45316 | `e19e0c9a3fdc4c11…` |
-| `studio.html` | 53706 | `73c4119593fcfba9…` |
+| `studio.html` | 81021 | `585d453648b092bf…` |
 | `icon.ico` | 73349 | `be7858e5ce66b7d6…` |
 | `icon.png` | 9304 | `3cc8b71f71d92672…` |
-| `使用说明.txt` | 5710 | `a52a7e09f03639a8…` |
-| `CHANGELOG.md` | 7748 | `0342d31f058bd13c…` |
+| `使用说明.txt` | 6451 | `7c8720f0328ab580…` |
+| `CHANGELOG.md` | 9534 | `3b4fa5ab6b80e014…` |
 | `迭代记录/迭代记录.md` | 7860 | `ad9f22bac2066800…` |
 | `迭代记录/迭代记录-v2.md` | 6507 | `a7362ba1bf1b3abf…` |
 | `迭代记录/迭代记录-v3.md` | 8230 | `5242942456be591d…` |
