@@ -59,6 +59,8 @@ if (Test-Bridge) {
   Write-Output ('URL=' + $url)
 } else {
   Write-Output 'BRIDGE_FAILED'
+  $verOut = & $py --version 2>&1
+  Write-Output ('Python detected: ' + $verOut + ' (needs 3.7+)')
   Write-Output ('Make sure python is on PATH and run: ' + $py + ' ' + $script)
   exit 1
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v1.7.0)
+"""创作工具星图 · 自动化质量自检套件 (v1.8.0)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v1.7.0"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v1.8.0"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -48,8 +48,13 @@ def check(name, ok, detail=""):
     _results.append((name, bool(ok), detail))
 
 
+_READ_MISSING = []   # 轮14：记录 read() 遇到的缺失文件
 def read(rel):
-    return (BASE / rel).read_text(encoding="utf-8")
+    try:
+        return (BASE / rel).read_text(encoding="utf-8")
+    except OSError:
+        if rel not in _READ_MISSING: _READ_MISSING.append(rel)
+        return ""
 
 
 # ---------------------------------------------------------------- 检查项
@@ -110,11 +115,16 @@ def check_version_consistency():
         "首页": (re.search(r"(v\d+\.\d+\.\d+)", read("index.html")) or [None, ""])[1],
         "工坊": (re.search(r"(v\d+\.\d+\.\d+)", read("studio.html")) or [None, ""])[1],
     }
-    # 轮16：README 纳入版本检查（构建目录内的仓库 README）
-    readme = Path(__file__).resolve().parent.parent / "creative-tools-atlas" / "README.md"
+    # 轮13：README 版本检查——路径不可达时显式 FAIL，不静默跳过
+    repo_readme = Path(__file__).resolve().parent.parent / "creative-tools-atlas" / "README.md"
+    pkg_readme = BASE.parent / "creative-tools-atlas" / "README.md"
+    readme = repo_readme if repo_readme.is_file() else pkg_readme
     if readme.is_file():
         rm = re.search(r"v(\d+\.\d+\.\d+)\s+起带", readme.read_text(encoding="utf-8"))
         sources["README"] = ("v" + rm.group(1)) if rm else ""
+        check("版本/README", rm is not None, "README版本字段存在" if rm else "README无版本字段")
+    else:
+        check("版本/README", False, "README 路径不可达（仓库源码不在预期位置）")
     changelog = read("CHANGELOG.md")
     first = re.search(r"^##\s+(v\d+\.\d+\.\d+)", changelog, re.M)
     sources["CHANGELOG首条"] = first.group(1) if first else ""
@@ -270,6 +280,9 @@ def main():
     check_diagnostic_tool()
     check_studio()
     check_ps_braces()
+    # 轮14：被读文件缺失 -> 结构化 FAIL，而非 traceback
+    check("读取/文件齐全", not _READ_MISSING,
+          "全部可读" if not _READ_MISSING else "缺失:" + ",".join(_READ_MISSING))
 
     passed = sum(1 for _, ok, _ in _results if ok)
     total = len(_results)

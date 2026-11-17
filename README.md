@@ -1,19 +1,20 @@
 # 创作工具星图 · Creative Tools Atlas
 
 > 一份离线可读的 GitHub 创作工具调研星图、一条实操航线，以及一个能真正调用本机软件的内容工坊。
-> v1.7.0 起带**本地工具桥**：工坊里的工具不再是冷冰冰的 GitHub 链接，而是「已装→点击启动 / 未装→一键安装」。
+> v1.8.0 起带**本地工具桥**：工坊里的工具不再是冷冰冰的 GitHub 链接，而是「已装→点击启动 / 未装→一键安装」。
 
 <p align="left">
   <strong>内容本地可读 · 工具点击即调用 · 效果优先排序 · 任务包直接流入执行台</strong>
 </p>
 
-## v1.7.0 新特性：本地工具链与工作流支线
+## v1.8.0 质量加固（本地工具链 v1.6.1 / 工作流支线 v1.6.2 引入）
 
 - **真装了 10 个桌面软件**（Krita / Blender / FreeCAD / OpenSCAD / MeshLab / OpenToonz / Cura / PrusaSlicer / OrcaSlicer / UVtools），winget 静默安装，100% 可被探测。
 - **本地工具桥** `tools/tool-bridge.py`：只监听 `127.0.0.1:7843` 的零依赖 HTTP 服务。工坊页通过它启动/安装工具。用法：
 
   ```powershell
-  cd tools
+  # 源码仓库：cd tools；发布包解压后：cd 创作工具星图/快捷方式工具
+    cd tools
   powershell -ExecutionPolicy Bypass -File start-tool-bridge.ps1
   ```
 
@@ -45,7 +46,7 @@
 
 ### 方式二：Windows 免安装应用
 
-前往 **Releases** 下载 `creative-tools-atlas-v1.7.0-win64.zip`（约 8 MB），解压到任意目录，双击 `创作工具星图.exe`：
+前往 **Releases** 下载 `creative-tools-atlas-v1.8.0-win64.zip`（约 8 MB），解压到任意目录，双击 `创作工具星图.exe`：
 
 - 以 Edge / Chrome 的**应用模式窗口**打开（无地址栏、无标签栏，像独立软件而非浏览器页面）；
 - 找不到 Edge / Chrome 时自动回退系统默认浏览器，也可手动双击 `index.html`；
@@ -97,7 +98,7 @@ creative-tools-atlas/
 ├── src/                                构建期源码（Python）
 │   ├── launcher.py                     Windows 启动器（应用窗口 + 回退链）
 │   ├── build_manifest.py               生成 SHA-256 校验清单
-│   └── selftest.py                     自动化质量自检套件（22 条断言）
+│   └── selftest.py                     自动化质量自检套件（25 条断言）
 ├── tools/                              PowerShell 工具（纯 ASCII）
 │   ├── shortcut.ps1                    快捷方式创建 / 回读
 │   ├── resolve-desktop.ps1             解析真实桌面路径
@@ -108,7 +109,7 @@ creative-tools-atlas/
 │   ├── start-tool-bridge.ps1           一键启动工具桥
 │   ├── install-comfyui.ps1             AI 引擎安装脚本（默认不下载权重）
 │   └── 安装AI引擎说明.md               AI 模型体积与下载指引（UTF-8 中文）
-├── docs/                               使用说明、变更日志、校验基线、六轮迭代记录
+├── docs/                               使用说明、变更日志、校验基线、七轮迭代记录
 └── assets/                             应用图标
 ```
 
@@ -134,7 +135,7 @@ pyinstaller --noconfirm --clean --onedir --windowed \
 3. 自动探测：脚本同目录 / 同级「创作工具星图」/ 父目录（要求同时具备完整包特征）
 
 ```bash
-# 开发期：对完整软件包跑 17 条静态断言
+# 开发期：对完整软件包跑 25 条静态断言
 python src/selftest.py --base "D:\path\to\创作工具星图"
 
 # 或用环境变量
@@ -143,19 +144,19 @@ python src/selftest.py
 python src/build_manifest.py
 ```
 
-断言覆盖：HTML 结构与打印样式、外链 `noopener` 加固、无障碍 landmark 与标题层级、五处版本号一致、清单与启动器动态同步、`.ps1` 纯 ASCII、迭代档案轮次完整、诊断器自身完整性。任一失败退出码非 0。
+断言覆盖：HTML 结构与打印样式、外链 `noopener` 加固、无障碍 landmark 与标题层级、七处版本号一致、清单与启动器动态同步、`.ps1` 纯 ASCII、迭代档案轮次完整、诊断器自身完整性。任一失败退出码非 0。
 
 `docs/MANIFEST.md` 是**Release 完整包**的 SHA-256 校验基线（对应解压后的目录结构），`tools/verify-package.ps1` 与 `tools/diagnose.ps1` 按它核对；源码仓库本身不需要它。
 
 ## 迭代档案
 
-这个产出物经历了 **6 轮 × 20 轮 = 120 轮**迭代完善，每轮均记录优化目标、改动、理由与自检结果：
+这个产出物经历了 **8 轮 × 20 轮 = 160 轮**迭代完善，每轮均记录优化目标、改动、理由与自检结果：
 
 - [第一轮](docs/迭代记录/迭代记录.md) · [第二轮](docs/迭代记录/迭代记录-v2.md) · [第三轮](docs/迭代记录/迭代记录-v3.md)
-- [第四轮](docs/迭代记录/迭代记录-v4.md) · [第五轮](docs/迭代记录/迭代记录-v5.md) · [第六轮](docs/迭代记录/迭代记录-v6.md)
+- [第四轮](docs/迭代记录/迭代记录-v4.md) · [第五轮](docs/迭代记录/迭代记录-v5.md) · [第六轮](docs/迭代记录/迭代记录-v6.md) · [第七轮](docs/迭代记录/迭代记录-v7.md) · [第八轮](docs/迭代记录/迭代记录-v8.md)
 - [变更日志](docs/CHANGELOG.md) · [使用说明](docs/使用说明.txt)
 
-演进主线：v1.0 裸 HTML → v1.1 软件包化 → v1.2 应用窗口与哈希校验 → v1.3 锁 bug 与外链安全 → v1.4 多用户锁隔离与语义化 → v1.5 校验器动态化 → v1.6 自动化质量保障体系 + 创作工坊 → v1.6.1 本地工具链（点击即调用）→ v1.6.2 工作流支线化（选需求进专属支线）→ v1.7.0 二十轮质量迭代（正确性/安全/边界/一致性全面加固）。
+演进主线：v1.0 裸 HTML → v1.1 软件包化 → v1.2 应用窗口与哈希校验 → v1.3 锁 bug 与外链安全 → v1.4 多用户锁隔离与语义化 → v1.5 校验器动态化 → v1.6 自动化质量保障体系 + 创作工坊 → v1.6.1 本地工具链（点击即调用）→ v1.6.2 工作流支线化（选需求进专属支线）→ v1.7.0 第七轮20轮质量迭代 → v1.8.0 第八轮20轮（运行时/语义/状态一致性/构建门禁）。
 
 ## 说明
 

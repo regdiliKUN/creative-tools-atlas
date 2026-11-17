@@ -64,6 +64,14 @@ def w(msg):
     print(line, flush=True)
     try:
         with _LOG_LOCK:
+            # 轮19：简单轮转——超过 1MB 就改名 .1（最多保留一份旧日志）
+            try:
+                if LOG.stat().st_size > 1024 * 1024:
+                    bak = LOG.with_suffix(".log.1")
+                    if bak.exists(): bak.unlink()
+                    LOG.rename(bak)
+            except OSError:
+                pass
             with LOG.open("a", encoding="utf-8") as f:
                 f.write(line + "\n")
     except Exception:
@@ -221,6 +229,8 @@ def install(tid):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"   # 轮6：keep-alive，需每个响应带 Content-Length（_json 已有）
+
     def _origin_allowed(self):
         """浏览器请求：仅放行 file://(null) 与本机 http(s) 预览来源。"""
         origin = self.headers.get("Origin")
@@ -277,6 +287,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         if self._guard(): return
         self.send_response(204)
+        self.send_header("Content-Length", "0")
         self._cors()
         self.end_headers()
 
@@ -294,6 +305,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self._guard(): return
+        # 轮6：消费并丢弃请求体（上限 64KB，防滥用）；避免残留 body 污染下一次请求
+        try:
+            n = int(self.headers.get('Content-Length', '0') or 0)
+        except ValueError:
+            n = 0
+        if n > 0:
+            self.rfile.read(min(n, 65536))
         u = urlparse(self.path)
         qs = parse_qs(u.query)
         tid = (qs.get("id") or [""])[0]
@@ -321,6 +339,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if sys.version_info < (3, 7):
+        print("ERROR: tool-bridge needs Python 3.7+; found " + sys.version.split()[0])
+        sys.exit(1)
     w("tool-bridge starting on 127.0.0.1:%d" % PORT)
     try:
         srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
