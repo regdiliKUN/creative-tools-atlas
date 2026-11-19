@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=atlas_painter
+X-Python-2-Compatible=false
+Name=Atlas AI Painter
+Comment=Atlas studio panel + AI paints stroke by stroke in Krita (Creator Atlas)

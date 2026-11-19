@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 - 本地启动器 (v1.6.0)。
+"""创作工具星图 - 本地启动器 (v1.6.0；第二十轮：统一入口)。
+
+第二十轮起：先确认本地工具桥在运行（没运行就在后台无窗口启动），再用应用窗口打开
+http://127.0.0.1:7843/ ——从工具桥地址打开的页面才能通过安全校验，执行台的一键执行才可用。
+（以前直接打开 file:// 页面，浏览器不发来源信息，执行台始终用不了，必须另外双击 start-all.bat。）
+工具桥实在起不来时，退回旧方式打开本地文件，内容照样能看。ComfyUI 不在这里启动——
+引擎需要时会自动拉起，打开软件不会白白占用显存。
 
 双击 exe 后：在本程序所在目录寻找 index.html，以应用窗口方式打开，
 避免出现传统浏览器的地址栏/标签栏弹窗观感。纯本地、无联网、无第三方依赖。
@@ -38,12 +44,74 @@ def file_url(path):
     return "file:///" + quote(os.path.abspath(path).replace("\\", "/"), safe="/:")
 
 
+BRIDGE_URL = "http://127.0.0.1:7843"
+
+
+def bridge_alive(timeout=1.0):
+    """工具桥在运行且身份正确（挡住占了 7843 端口的其他程序）。"""
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(BRIDGE_URL + "/api/ping", timeout=timeout) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        return bool(d.get("ok")) and d.get("service") == "atlas-tool-bridge"
+    except Exception:
+        return False
+
+
+def _find_python():
+    """找本机 Python：优先 pythonw（不弹黑窗口）。冻结 exe 里 PATH 一般仍在，再补常见安装位置。"""
+    import glob
+    import shutil
+    for n in ("pythonw", "python"):
+        p = shutil.which(n)
+        if p:
+            if n == "python":
+                w = os.path.join(os.path.dirname(p), "pythonw.exe")
+                if os.path.isfile(w):
+                    return w
+            return p
+    local = os.environ.get("LOCALAPPDATA", "")
+    for pat in (os.path.join(local, "Programs", "Python", "Python3*", "pythonw.exe"),
+                r"C:\Python3*\pythonw.exe"):
+        hits = sorted(glob.glob(pat), reverse=True)
+        if hits:
+            return hits[0]
+    return None
+
+
+def ensure_bridge(base, wait=15.0):
+    """工具桥没运行就后台启动（无窗口），最多等 wait 秒。返回是否可用。"""
+    import time
+    if bridge_alive():
+        return True
+    script = os.path.join(base, "快捷方式工具", "tool-bridge.py")
+    py = _find_python()
+    if not py or not os.path.isfile(script):
+        return False
+    flags = 0
+    if os.name == "nt":
+        flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0) \
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    try:
+        subprocess.Popen([py, script], cwd=os.path.dirname(script), creationflags=flags, close_fds=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        return False
+    t0 = time.time()
+    while time.time() - t0 < wait:
+        time.sleep(0.5)
+        if bridge_alive(0.8):
+            return True
+    return False
+
+
 def launch_app_window(path):
-    """优先用 Edge/Chrome 应用模式打开，返回是否成功提交。
+    """优先用 Edge/Chrome 应用模式打开，返回是否成功提交。path 可以是本地文件，也可以是 http 地址。
 
     健壮性：捕获超时与 OSError，单个候选失败不影响后续回退。
     """
-    url = file_url(path)
+    url = path if str(path).startswith("http") else file_url(path)
     for exe in APP_BROWSERS:
         if not exe or not os.path.isfile(exe):
             continue
@@ -124,7 +192,7 @@ def acquire_single_instance(base):
 
 
 def open_in_browser(path):
-    url = file_url(path)
+    url = path if str(path).startswith("http") else file_url(path)
     # 主路径：应用窗口（无地址栏/标签栏弹窗感）
     if launch_app_window(path):
         return True
@@ -211,7 +279,9 @@ def main():
     # 单实例保护：连点快捷方式时不再叠加多个窗口；
     # 锁获取失败时降级为正常启动，绝不阻断用户。
     if acquire_single_instance(base):
-        open_in_browser(index)
+        # 第二十轮：统一入口——工具桥可用就打开工具桥地址（一键执行可用），否则退回本地文件
+        target = BRIDGE_URL + "/" if os.path.isfile(os.path.join(base, "index.html")) and ensure_bridge(base) else index
+        open_in_browser(target)
 
 
 if __name__ == "__main__":

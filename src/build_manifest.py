@@ -61,12 +61,29 @@ FILES = [
     "迭代记录/迭代记录-v8.md",
     "迭代记录/迭代记录-v9.md",
     "迭代记录/迭代记录-v10.md",
+    "迭代记录/迭代记录-v11.md",
+    "迭代记录/迭代记录-v12.md",
     "快捷方式工具/shortcut.ps1",
     "快捷方式工具/resolve-desktop.ps1",
     "快捷方式工具/rebuild-shortcut.ps1",
     "快捷方式工具/verify-package.ps1",
     "快捷方式工具/diagnose.ps1",
     "快捷方式工具/tool-bridge.py",
+    "快捷方式工具/start-all.bat",
+    "快捷方式工具/check-bridge-fresh.ps1",
+    "快捷方式工具/painter/stroke_planner.py",
+    "快捷方式工具/painter/install_krita_plugin.py",
+    "快捷方式工具/painter/pykrita/atlas_painter.desktop",
+    "快捷方式工具/painter/pykrita/atlas_painter/__init__.py",
+    "快捷方式工具/painter/pykrita/atlas_painter/atlas_painter.py",
+    "快捷方式工具/painter/pykrita/atlas_painter/atlas_studio.py",
+    "快捷方式工具/translate_zh_en.py",
+    "快捷方式工具/download_model.py",
+    "快捷方式工具/automation.py",
+    "快捷方式工具/clean_image.py",
+    "快捷方式工具/workflows/trellis2_image_to_3d.json",
+    "快捷方式工具/install-comfyui-v312.ps1",
+    "快捷方式工具/本机安装配置记录.md",
     "快捷方式工具/start-tool-bridge.ps1",
     "快捷方式工具/install-comfyui.ps1",
     "快捷方式工具/安装AI引擎说明.md",
@@ -123,7 +140,10 @@ def main():
         if not f.is_file(): continue
         rel=str(f.relative_to(BASE)).replace("\\","/")
         if rel=="MANIFEST.md" or "_internal" in f.parts or "__pycache__" in f.parts: continue
-        if f.name in ("tool-bridge.log","tool-bridge.log.1","install-state.json"): continue
+        # 轮11：jobs.json 是自动化引擎的运行时状态（作业历史/进度），不是交付物
+        if f.name in ("tool-bridge.log","tool-bridge.log.1","install-state.json","jobs.json","start-all.log", ".krita_token","krita_session.json","krita_session.ack","krita_session.json.tmp", "translate_cache.json", "translate_cache.json.tmp"): continue
+        # 第十二轮：outputs/ 是用户作业产物（运行时生成），不是交付物
+        if rel.startswith("outputs/"): continue
         if rel not in declared: extra.append(rel)
     if extra:
         print("ERROR: files in package but NOT declared in FILES (add them or exclude):", file=sys.stderr)

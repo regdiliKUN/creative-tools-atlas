@@ -27,23 +27,40 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
+# 自动化执行引擎（失败不影响主桥启动——保持向后兼容）
+try:
+    import automation as _auto
+except Exception as _ae:
+    _auto = None
+    print("WARN automation engine unavailable: " + str(_ae)[:120], flush=True)
+
 PORT = 7843
 SERVICE = "atlas-tool-bridge"
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 _BRIDGE_TOKEN = secrets.token_urlsafe(24)   # 轮1：challenge token，仅内存，进程重启即换
+# 第十八轮：Krita「Atlas 工坊」面板专用令牌——启动时写进本目录 .krita_token，面板读它调用工具桥。
+# 只放行"回传继续 / 保存提示词 / 翻译提示词"三个接口，拿不到网页令牌能做的启动、安装等操作。
+_PLUGIN_TOKEN = secrets.token_urlsafe(24)
+PLUGIN_PATHS = ("/api/job/resume", "/api/job/spec", "/api/translate")   # 第十九轮：面板精修前翻译提示词
+UPLOAD_PATHS = ("/api/upload", "/api/job/input")                          # 第二十轮：上传输入图片 / 3D 模型
 _LOG_LOCK = threading.Lock()          # 轮20：多线程日志串行化
 _INSTALL_LOCK = threading.Lock()      # 轮20：安装去重（同一时刻只允许一个）
 _INSTALLING = set()
 # 安全白名单：只允许本机来源，防止任意网页/DNS rebinding 跨站触发 launch/install
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 HERE = Path(__file__).resolve().parent
+# 第十二轮：代码指纹——启动时对 tool-bridge.py + automation.py 取 SHA-256 前 12 位。
+# start-all.bat 用同样算法比对磁盘文件，不一致说明跑的是旧代码，自动重启桥。
+import hashlib as _hl
+CODE_STAMP = _hl.sha256(b"".join((HERE / n).read_bytes() for n in ("tool-bridge.py", "automation.py")
+                                 if (HERE / n).is_file())).hexdigest()[:12]
 LOG = HERE / "tool-bridge.log"
 INSTALL_STATE = HERE / "install-state.json"   # 轮9：安装状态记录
 
 # 工具定义：id -> {name, kind, winget, pip, exe(glob 候选), args, note}
 # kind: desktop=有 exe 可启动 / cli=pip 包 / suite=依附宿主(ComfyUI/Blender) / web=云端或源码
 TOOLS = {
-    "krita":        {"name":"Krita","kind":"desktop","winget":"KDE.Krita","exe":[r"C:\Program Files\Krita (x64)\krita.exe",r"C:\Program Files\Krita\krita.exe"],"reg":["Krita"]},
+    "krita":        {"name":"Krita","kind":"desktop","winget":"KDE.Krita","exe":[r"C:\Program Files\Krita (x64)\bin\krita.exe",r"C:\Program Files\Krita\bin\krita.exe",r"C:\Program Files\Krita (x64)\krita.exe",r"C:\Program Files\Krita\krita.exe"],"reg":["Krita"]},
     "blender":      {"name":"Blender","kind":"desktop","winget":"BlenderFoundation.Blender","exe":[r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",r"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe",r"C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"],"reg":["Blender"]},
     "freecad":      {"name":"FreeCAD","kind":"desktop","winget":"FreeCAD.FreeCAD","exe":[r"C:\Program Files\FreeCAD*\bin\FreeCAD.exe"],"reg":["FreeCAD"]},
     "openscad":     {"name":"OpenSCAD","kind":"desktop","winget":"OpenSCAD.OpenSCAD","exe":[r"C:\Program Files\OpenSCAD\openscad.exe"],"reg":["OpenSCAD"]},
@@ -54,7 +71,8 @@ TOOLS = {
     "orcaslicer":   {"name":"OrcaSlicer","kind":"desktop","winget":"SoftFever.OrcaSlicer","exe":[r"C:\Program Files\OrcaSlicer\OrcaSlicer.exe"],"reg":["OrcaSlicer"]},
     "uvtools":      {"name":"UVtools","kind":"desktop","winget":"PTRTECH.UVtools","exe":[r"C:\Program Files\UVtools\UVtools.exe"],"reg":["UVtools"]},
     "aseprite":     {"name":"Aseprite","kind":"desktop","exe":[r"C:\Program Files\Aseprite\Aseprite.exe"],"reg":["Aseprite"]},
-    "comfyui":      {"name":"ComfyUI","kind":"suite","exe":[r"C:\ComfyUI\run_nvidia_gpu.bat",r"D:\ComfyUI\run_nvidia_gpu.bat"]},
+    # 第十二轮：优先认本机便携版（I:\workbuddy\AI-Engine\portable），否则"需配置"会误报
+    "comfyui":      {"name":"ComfyUI","kind":"suite","exe":[r"I:\workbuddy\AI-Engine\portable\ComfyUI_windows_portable\run_nvidia_gpu.bat",r"C:\ComfyUI\run_nvidia_gpu.bat",r"D:\ComfyUI\run_nvidia_gpu.bat"]},
     "trimesh":      {"name":"trimesh","kind":"cli","pip":"trimesh"},
     "cadquery":     {"name":"CadQuery","kind":"cli","pip":"cadquery"},
     "assimp":       {"name":"Assimp","kind":"cli","pip":"pyassimp"},
@@ -263,6 +281,18 @@ def launch(tid):
         return True, "已在浏览器打开 " + t["name"]
     if t["kind"] == "cli":
         return False, t["name"] + " 是 Python 命令行库，无 GUI 可启动；在脚本里 import 使用即可。"
+    if tid == "comfyui":
+        # 第十二轮：便携版直接起服务（独立控制台窗口、不自动开浏览器），与 start-all.bat 一致
+        bat = find_exe(t.get("exe", []), None)
+        if bat:
+            root = Path(bat).parent
+            py = root / "python_embeded" / "python.exe"
+            if py.is_file():
+                flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+                subprocess.Popen([str(py), "-s", "ComfyUI\\main.py", "--windows-standalone-build",
+                                  "--disable-auto-launch", "--disable-dynamic-vram", "--cache-classic"],   # 见 start-all.bat 的说明
+                                 cwd=str(root), creationflags=flags)
+                return True, "已启动 ComfyUI（约 30 秒就绪，就绪后执行台会显示「运行中」）"
     if t["kind"] == "suite":
         return False, t["name"] + " 需先安装框架与模型权重，请按「安装AI引擎说明.md」启动。"
     exe = find_exe(t.get("exe", []), t.get("reg")) if (t.get("exe") or t.get("reg")) else None
@@ -330,6 +360,28 @@ def install(tid):
             _set_install_state(tid, "failed", "未预期退出")
 
 
+
+def _diag():
+    out = {}
+    def run(args, t=15):
+        try:
+            r = subprocess.run(args, capture_output=True, text=True, timeout=t,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            return (r.stdout or r.stderr or "").strip()
+        except Exception as e:
+            return "ERR " + str(e)
+    out["gpu"] = run(["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,clocks.sm,clocks_throttle_reasons.active",
+                      "--format=csv,noheader"])
+    out["gpu_apps"] = run(["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"])
+    out["top_mem"] = run(["powershell", "-NoProfile", "-Command",
+                          "Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 "
+                          "| ForEach-Object { '{0} {1} {2}MB cpu={3}' -f $_.Id,$_.ProcessName,[int]($_.WorkingSet64/1MB),[int]$_.CPU }"], 30)
+    out["mem"] = run(["powershell", "-NoProfile", "-Command",
+                      "$o=Get-CimInstance Win32_OperatingSystem; '{0}MB free of {1}MB; commit {2}MB of {3}MB' -f "
+                      "[int]($o.FreePhysicalMemory/1KB),[int]($o.TotalVisibleMemorySize/1KB),"
+                      "[int](($o.TotalVirtualMemorySize-$o.FreeVirtualMemory)/1KB),[int]($o.TotalVirtualMemorySize/1KB)"], 30)
+    return out
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"   # 轮6：keep-alive，需每个响应带 Content-Length（_json 已有）
 
@@ -394,6 +446,7 @@ class Handler(BaseHTTPRequestHandler):
         if self._forbidden():
             w("FORBIDDEN host=%s origin=%s" % (
                 self.headers.get("Host", ""), self.headers.get("Origin", "-")))
+            self.close_connection = True   # 第十九轮：没读请求体就拒绝 → 必须断开，否则残留的请求体会被当成下一个请求
             self._json({"ok": False, "error": "forbidden origin/host"}, 403)
             return True
         return False
@@ -403,6 +456,9 @@ class Handler(BaseHTTPRequestHandler):
         got = self.headers.get("X-Bridge-Token", "")
         if got != _BRIDGE_TOKEN:
             w("REJECT token-less sensitive request")
+            # 第十九轮：这里还没读请求体。保持连接的话，残留的 JSON 正文会被当成下一个请求的开头
+            # （实测：令牌失效 → 页面重新申请令牌并重发 → 拿到 501 "Unsupported method"）。拒绝后断开连接。
+            self.close_connection = True
             self._json({"ok": False, "error": "missing/invalid bridge token"}, 403)
             return True
         return False
@@ -428,12 +484,44 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    # 第十二轮：桥直接托管工坊页面。file:// 页面发出的请求浏览器一律不带 Referer，
+    # /api/challenge 因此永远拒绝（日志 "CHALLENGE denied (referer=-)"），一键执行不可用。
+    # 从 http://127.0.0.1:7843/studio.html 打开后与 API 同源，Referer 为本机 http 来源，
+    # 走既有的 _referer_ok 规则——安全口径不变（远程网站无法伪造本机 Referer）。
+    # 白名单托管，不做任意路径映射，杜绝路径穿越。
+    STATIC = {
+        "/": ("index.html", "text/html; charset=utf-8"),     # 第二十轮：统一入口——根地址是导航首页
+        "/studio.html": ("studio.html", "text/html; charset=utf-8"),
+        "/index.html": ("index.html", "text/html; charset=utf-8"),
+        "/github-creative-tools-atlas.html": ("github-creative-tools-atlas.html", "text/html; charset=utf-8"),
+        "/route-a-painter-workstation.html": ("route-a-painter-workstation.html", "text/html; charset=utf-8"),
+        "/icon.png": ("icon.png", "image/png"),
+        "/icon.ico": ("icon.ico", "image/x-icon"),
+    }
+
+    def _send_static(self, path):
+        name, ctype = self.STATIC[path]
+        f = HERE.parent / name
+        if not f.is_file():
+            return self._json({"ok": False, "error": "not found"}, 404)
+        body = f.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "same-origin")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         if self._guard(): return
         u = urlparse(self.path)
+        if u.path in self.STATIC:
+            return self._send_static(u.path)
         if u.path == "/api/ping":
             # 轮2：公开可验证的身份标识（前端核对 service/version，挡住假服务）
-            return self._json({"ok": True, "service": SERVICE, "version": VERSION, "port": PORT})
+            return self._json({"ok": True, "service": SERVICE, "version": VERSION, "port": PORT, "stamp": CODE_STAMP})
         if u.path == "/api/challenge":
             # 轮1：challenge token 只发给来自 studio.html 的请求
             if not self._referer_ok():
@@ -447,11 +535,68 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/log":
             txt = LOG.read_text(encoding="utf-8")[-4000:] if LOG.exists() else ""
             return self._json({"ok": True, "log": txt})
+        # ---- 自动化引擎端点 ----
+        if u.path == "/api/engine":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            avail, info = _auto.comfy_available()
+            return self._json({"ok": True, "comfy_online": avail, "comfy": info,
+                               "comfy_url": _auto.COMFY_URL})
+        if u.path == "/api/diag":
+            # 第二十轮：只读诊断——谁在占显卡 / 内存（出图忽快忽慢时排查用），不接受任何参数
+            return self._json(dict(_diag(), ok=True))
+        if u.path == "/api/models":
+            # 第二十轮：出图底模列表（是否已下载 / 下载进度）
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            return self._json({"ok": True, "models": _auto.ckpt_status()})
+        if u.path == "/api/translate/status":
+            # 第十九轮：本地翻译模型状态（只读）
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            return self._json(dict(_auto.translate_state(), ok=True))
+        if u.path == "/api/jobs":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            return self._json({"ok": True, "jobs": _auto.list_jobs()})
+        if u.path.startswith("/api/job/") and "/file/" in u.path:
+            # 第十二轮：产物缩略图——只回本作业目录里的图片，文件名取 basename
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            jid, _, name = u.path[len("/api/job/"):].partition("/file/")
+            from urllib.parse import unquote
+            f = _auto.job_file(jid, unquote(name))
+            ctypes_ = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+            if f is None or f.is_dir() or f.suffix.lower() not in ctypes_:
+                return self._json({"ok": False, "error": "not found"}, 404)
+            body = f.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", ctypes_[f.suffix.lower()])
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if u.path.startswith("/api/job/"):
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            jid = u.path.split("/api/job/", 1)[1].split("?")[0]
+            job = _auto.get_job(jid)
+            if not job:
+                return self._json({"ok": False, "error": "job not found"}, 404)
+            return self._json({"ok": True, "job": job})
         self._json({"ok": False, "error": "not found"}, 404)
+
+    def _plugin_ok(self):
+        import hmac
+        got = self.headers.get("X-Atlas-Plugin", "")
+        return bool(got) and urlparse(self.path).path in PLUGIN_PATHS and hmac.compare_digest(got, _PLUGIN_TOKEN)
 
     def do_POST(self):
         if self._guard(): return
-        if self._token_guard(): return
+        if not self._plugin_ok() and self._token_guard(): return
         # 轮11：兑现"不污染下一次请求"的承诺。HTTP/1.1 keep-alive 下，
         # 只读 min(n,65536) 会把剩余字节留在流里，被当成下一个请求的方法行。
         # 因此超限直接 413 并关闭连接；合法大小则精确读满 n 字节。
@@ -459,9 +604,12 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get('Content-Length', '0') or 0)
         except ValueError:
             n = 0
-        if n < 0 or n > 65536:
+        # 第二十轮：上传输入文件的两个接口放宽到 200MB，其余仍是 64KB
+        limit = 200 * 1024 * 1024 if urlparse(self.path).path in UPLOAD_PATHS else 65536
+        if n < 0 or n > limit:
             self.close_connection = True
-            return self._json({"ok": False, "error": "request body too large (max 64KB)"}, 413)
+            return self._json({"ok": False, "error": "request body too large (max %s)" % (
+                "200MB" if limit > 65536 else "64KB")}, 413)
         if n > 0:
             got = self.rfile.read(n)
             if len(got) != n:          # 对端提前断开，同样不能复用这条连接
@@ -487,10 +635,189 @@ class Handler(BaseHTTPRequestHandler):
                 invalidate_status_cache()   # 轮15：安装后状态必须立刻重算，不能等 TTL
             w("INSTALL %s -> %s (%s)" % (tid, "OK" if ok else "FAIL", msg))
             return self._json({"ok": ok, "message": msg})
+        # ---- 自动化引擎端点（走同一 token 守卫，安全等级与 launch/install 一致）----
+        if u.path == "/api/job/create":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            try:
+                body = json.loads(got.decode("utf-8") if n > 0 else "{}")
+            except Exception:
+                return self._json({"ok": False, "error": "invalid JSON body"}, 400)
+            if not isinstance(body, dict) or not isinstance(body.get("steps"), list):
+                return self._json({"ok": False, "error": "job spec needs 'steps' array"}, 400)
+            if len(body["steps"]) > 50:
+                return self._json({"ok": False, "error": "too many steps (max 50)"}, 400)
+            # 轮18：校验每个 step 是对象且 kind/label 是字符串——畸形作业单会让
+            # 引擎 step.get() 崩溃。提前拒绝，返回 400 而不是让作业静默失败。
+            bad_steps = [i for i, s in enumerate(body["steps"])
+                         if not isinstance(s, dict)
+                         or not isinstance(s.get("kind", ""), str)
+                         or not isinstance(s.get("label", ""), str)]
+            if bad_steps:
+                return self._json({"ok": False,
+                                   "error": "invalid step at index %s (need object with string kind/label)"
+                                            % bad_steps[:3]}, 400)
+            jid = _auto.create_job(body)
+            w("JOB created %s (%d steps)" % (jid, len(body["steps"])))
+            return self._json({"ok": True, "job_id": jid})
+        if u.path == "/api/job/resume":
+            # 第十二轮：人工接手后继续（人工步骤记为完成；自动步骤因故暂停则重试）
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            ok, msg = _auto.resume_job(tid)
+            w("JOB resume %s -> %s" % (tid, msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/translate/install":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            ok, msg = _auto.install_translator(mirror=(qs.get("mirror") or [""])[0] == "1")
+            w("TRANSLATE install -> %s" % msg)
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/translate":
+            # 第十九轮：中文提示词 → 英文（页面预览 / Krita 面板精修前调用）
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            try:
+                body = json.loads(got.decode("utf-8") if n > 0 else "{}")
+                texts = [str(t)[:4000] for t in (body.get("texts") or [])][:10]
+            except Exception:
+                return self._json({"ok": False, "error": "invalid JSON body"}, 400)
+            res = [_auto.to_english(t) for t in texts]
+            return self._json({"ok": True, "texts": [r[0] for r in res], "untranslated": [m for r in res for m in r[1]]})
+        if u.path in UPLOAD_PATHS:
+            # 第二十轮：上传输入文件（原始字节作请求体，文件名在 ?name= 里只用来取扩展名）
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            if n <= 0 or len(got) != n:
+                return self._json({"ok": False, "message": "上传不完整"}, 400)
+            name = (qs.get("name") or [""])[0]
+            if u.path == "/api/upload":
+                ok, res = _auto.save_upload(got, name)
+                w("UPLOAD %s %d bytes -> %s" % (os.path.splitext(name)[1], n, res if ok else "FAIL"))
+                return self._json({"ok": ok, "name": res} if ok else {"ok": False, "message": res})
+            ok, msg = _auto.add_job_input(tid, got, name)
+            w("JOB input %s %d bytes -> %s" % (tid, n, msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/comfy/restart":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            ok, msg = _auto.restart_comfy()
+            w("COMFY restart -> %s" % msg)
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/models/install":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            ok, msg = _auto.install_ckpt((qs.get("name") or [""])[0])
+            w("MODEL install %s -> %s" % ((qs.get("name") or [""])[0], msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/job/pick":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            ok, msg = _auto.pick_variant(tid, (qs.get("name") or [""])[0])
+            w("JOB pick %s -> %s" % (tid, msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/job/spec":
+            # 第十八轮：Krita 面板（或页面）改提示词，写回作业单
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            try:
+                body = json.loads(got.decode("utf-8") if n > 0 else "{}")
+            except Exception:
+                return self._json({"ok": False, "error": "invalid JSON body"}, 400)
+            ok, msg = _auto.update_spec(tid, body if isinstance(body, dict) else {})
+            w("JOB spec %s -> %s" % (tid, msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/job/branch":
+            # 第十三轮：接手卡片上的 A/B/C 方案按钮——换成所选方案的后续步骤并继续执行
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            plan = (qs.get("plan") or [""])[0]
+            if plan not in getattr(_auto, "PLANS", {}):
+                return self._json({"ok": False, "message": "不支持的方案"}, 400)
+            detail = (qs.get("detail") or [""])[0]
+            ok, msg = _auto.branch_job(tid, plan, detail if detail in ("fine", "fast") else "")
+            w("JOB branch %s %s -> %s" % (tid, plan, msg))
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/job/open":
+            # 第十二轮：打开产物文件夹 / 用 Krita 打开产物
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            name = (qs.get("name") or [""])[0]
+            with_tool = (qs.get("with") or [""])[0]
+            if with_tool not in ("", "folder", "krita"):
+                return self._json({"ok": False, "message": "不支持的打开方式"}, 400)
+            ok, msg = _auto.open_job_output(tid, name, with_tool)
+            return self._json({"ok": ok, "message": msg})
+        if u.path == "/api/job/stop":
+            if not _auto:
+                return self._json({"ok": False, "error": "automation engine unavailable"}, 503)
+            # 轮3：优先按 jid 停止单个作业；未指定才全局停止
+            stop_id = tid or (qs.get("job_id") or [""])[0]
+            if stop_id:
+                _auto.stop_job(stop_id)
+                w("JOB stop requested: " + stop_id)
+                return self._json({"ok": True, "message": "已请求停止作业 " + stop_id})
+            _auto.stop_engine()
+            w("JOB stop requested (global)")
+            return self._json({"ok": True, "message": "已请求停止全部（当前步骤结束后生效）"})
         self._json({"ok": False, "error": "not found"}, 404)
 
     def log_message(self, fmt, *args):
         pass  # 静默，避免刷屏
+
+
+def _disk_stamp():
+    return _hl.sha256(b"".join((HERE / n).read_bytes() for n in ("tool-bridge.py", "automation.py")
+                               if (HERE / n).is_file())).hexdigest()[:12]
+
+
+def _auto_reload_watch(srv):
+    """第十九轮：代码文件更新后自动换成新代码，不用用户再双击 start-all.bat。
+    条件：磁盘上的代码指纹变了、新代码能编译通过、没有作业正在执行（暂停 / 完成的作业已落盘，重启后照常接着用）。"""
+    while True:
+        time.sleep(4)
+        try:
+            stamp = _disk_stamp()
+            if stamp == CODE_STAMP:
+                continue
+            for n in ("tool-bridge.py", "automation.py"):     # 只检查语法，不写 .pyc
+                compile((HERE / n).read_text(encoding="utf-8"), str(HERE / n), "exec")
+            # 第二十轮：语法对不等于能跑——实测出现过"常量在定义之前被使用"，导入即崩。
+            # 切换前在独立进程里真正导入一遍新代码（不启动服务），通过才切换。
+            chk = subprocess.run(
+                [sys.executable, "-c",
+                 "import importlib.util,sys;sys.path.insert(0,sys.argv[1]);import automation;"
+                 "s=importlib.util.spec_from_file_location('tb_check',sys.argv[1]+'/tool-bridge.py');"
+                 "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print('IMPORT_OK')", str(HERE)],
+                capture_output=True, text=True, timeout=90, cwd=str(HERE),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if "IMPORT_OK" not in chk.stdout:
+                w("AUTO-RELOAD skipped: new code fails to import: %s" % (chk.stderr or chk.stdout)[-300:].replace("\n", " | "))
+                time.sleep(60)
+                continue
+            if _auto and any(j.get("status") in ("queued", "running") for j in _auto.list_jobs()):
+                continue          # 有作业在跑：等它结束再换
+            w("AUTO-RELOAD code %s -> %s" % (CODE_STAMP, stamp))
+            if _auto:
+                _auto._save_jobs(force=True)
+                try:
+                    p = _auto._TR_PROC.get("p")
+                    if p is not None:
+                        p.kill()
+                except Exception:
+                    pass
+            flags = (getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                     | getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            subprocess.Popen([sys.executable, str(HERE / "tool-bridge.py")], cwd=str(HERE), creationflags=flags,
+                             close_fds=True)
+            srv.server_close()
+            os._exit(0)
+        except SyntaxError as e:
+            w("AUTO-RELOAD skipped: new code does not compile: %s" % str(e)[:200])
+            time.sleep(30)
+        except Exception as e:
+            w("AUTO-RELOAD error: %s" % str(e)[:200])
+            time.sleep(30)
 
 
 def main():
@@ -498,13 +825,33 @@ def main():
         print("ERROR: tool-bridge needs Python 3.7+; found " + sys.version.split()[0])
         sys.exit(1)
     w("tool-bridge starting on 127.0.0.1:%d" % PORT)
-    try:
-        srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    except OSError as e:
+    try:   # 第十八轮：给 Krita 面板的令牌（每次启动更换）
+        tmp = HERE / ".krita_token.tmp"
+        tmp.write_text(_PLUGIN_TOKEN, encoding="utf-8")
+        tmp.replace(HERE / ".krita_token")
+    except Exception as e:
+        w("write .krita_token failed: %s" % e)
+    srv = None
+    for _ in range(30):     # 第十九轮：自动更新重启时，旧进程可能还没完全释放端口——最多等 15 秒
+        try:
+            srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+            break
+        except OSError as e:
+            last_err = e
+            time.sleep(0.5)
+    if srv is None:
+        e = last_err
         w("tool-bridge FAILED to bind port %d: %s" % (PORT, e))
         w("Maybe another instance is running; use start-tool-bridge.ps1 -Stop first.")
         sys.exit(1)
     atexit.register(lambda: w("tool-bridge exiting."))
+    if _auto:
+        try:
+            _auto.start_engine()
+            w("automation engine ready (comfy=" + _auto.COMFY_URL + ")")
+        except Exception as e:
+            w("automation engine start failed: " + str(e)[:120])
+    threading.Thread(target=_auto_reload_watch, args=(srv,), daemon=True).start()
     w("tool-bridge ready.")
     try:
         srv.serve_forever()

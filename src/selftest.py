@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""创作工具星图 · 自动化质量自检套件 (v2.0.0)
+"""创作工具星图 · 自动化质量自检套件 (v2.1.0)
 
 构建期工具，位于构建目录，用 venv Python 运行：
     python selftest.py
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v2.0.0"  # 套件声明版本，必须与包内各文档一致
+VERSION = "v2.1.0"  # 套件声明版本，必须与包内各文档一致
 
 
 def resolve_package_dir():
@@ -138,7 +138,7 @@ def check_manifest_integrity():
     """清单项文件均存在；包内交付文档不得漏出清单；启动器须动态解析清单。"""
     man = read("MANIFEST.md")
     entries = re.findall(r"^\|\s*`([^`]+)`", man, re.M)
-    missing = [e for e in entries if not (BASE / e.replace("/", "\\")).is_file()]
+    missing = [e for e in entries if not (BASE / e).is_file()]   # 第二十轮：pathlib 自己处理分隔符，Linux / Windows 都能跑
     check("清单/文件存在", not missing,
           f"{len(entries)} 项" if not missing else "缺失:" + ",".join(missing))
 
@@ -148,7 +148,8 @@ def check_manifest_integrity():
     deliverables = [str(p.relative_to(BASE)).replace("\\", "/")
                     for p in BASE.rglob("*")
                     if p.is_file() and p.name != "MANIFEST.md" and "_internal" not in p.parts
-                    and p.name not in ("tool-bridge.log","tool-bridge.log.1","install-state.json") and "__pycache__" not in p.parts]
+                    and p.name not in ("tool-bridge.log","tool-bridge.log.1","install-state.json","jobs.json","start-all.log", ".krita_token","krita_session.json","krita_session.ack","krita_session.json.tmp", "translate_cache.json", "translate_cache.json.tmp") and "__pycache__" not in p.parts
+                    and p.relative_to(BASE).parts[0] != "outputs"]   # 第十二轮：用户产物不是交付物
     uncovered = [d for d in deliverables if d not in entries]
     check("清单/无遗漏", not uncovered,
           f"交付文件 {len(deliverables)} 个" if not uncovered else "漏:" + ",".join(uncovered))
@@ -175,15 +176,19 @@ def check_scripts_ascii():
 
 
 def check_iteration_archives():
-    """迭代档案：每份 20 轮且编号连续；CHANGELOG 版本数与档案数对应。"""
+    """迭代档案：每份 20 轮（或显式声明的专项轮数）且编号连续；CHANGELOG 版本数与档案数对应。"""
     archives = sorted((BASE / "迭代记录").glob("迭代记录*.md"))
     problems = []
     for p in archives:
-        nums = [int(x) for x in re.findall(r"^\*\*轮\s*(\d+)", p.read_text(encoding="utf-8"), re.M)]
-        expected = list(range(1, 21))
+        text = p.read_text(encoding="utf-8")
+        nums = [int(x) for x in re.findall(r"^\*\*轮\s*(\d+)", text, re.M)]
+        # 第十二轮：常规档案固定 20 轮；聚焦攻坚的专项档案须在文件内显式声明
+        # "<!-- 专项轮次：N -->"，且实际轮数必须恰为 N、编号从 1 连续——不允许凑数，也不允许少写。
+        decl = re.search(r"<!--\s*专项轮次：(\d+)\s*-->", text)
+        expected = list(range(1, (int(decl.group(1)) if decl else 20) + 1))
         if nums != expected:
             problems.append(f"{p.name}(轮数={len(nums)},连续={nums == expected[:len(nums)]})")
-    detail = f"{len(archives)} 份档案 × 20 轮" if not problems else "异常:" + ",".join(problems)
+    detail = f"{len(archives)} 份档案（常规 20 轮 / 专项按声明）编号连续" if not problems else "异常:" + ",".join(problems)
     check("档案/轮次完整", bool(archives) and not problems, detail)
 
     versions = re.findall(r"^##\s+(v\d+\.\d+\.\d+)", read("CHANGELOG.md"), re.M)
